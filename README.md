@@ -1,9 +1,11 @@
 
 # Node-CEF (NC.js)
 
-Node-CEF provides a Node.js module framework for your CEF projects.
+A CEF (Chromium Embedded Framework) extension which provides a Node.js module system for your CEF projects.
 
-It's based on the CEF wrapper API (libcef_dll_wrapper), therefore Node-CEF should be compatible with most CEF3 builds without modifying the `V8` engine or compiling a custom `libcef.dll`.
+![Node-CEF](http://ww2.sinaimg.cn/large/6a6bd9c5gw1f4f46hnar5j20o60i2ju7.jpg)
+
+It's based on the stable CEF dll-wrapper API, therefore Node-CEF should be compatible with most CEF3 builds without modifying the `V8` engine or compiling a custom `libcef.dll`.
 
 **Note:** The native (Java Script) modules are completely compatible with Node.js while the built-in and linked (*.node) modules are not ABI compatible, but you can modify these modules and build them with Node-CEF easily.
 
@@ -25,10 +27,18 @@ It's based on the CEF wrapper API (libcef_dll_wrapper), therefore Node-CEF shoul
 
 ### Security
 
-Any remote accesses to the `ncjs` module is forbidden, only `file://` scheme is the valid source to initialize Node-CEF.
+Any remote accesses to the `ncjs` module are forbidden, currently only `file://` scheme is the valid source to initialize Node-CEF.
 
 ### What's next:
 
+- [Buffer](https://nodejs.org/dist/latest-v4.x/docs/api/buffer.html)
+- [Child Process](https://nodejs.org/dist/latest-v4.x/docs/api/child_process.html)
+- [Events](https://nodejs.org/dist/latest-v4.x/docs/api/events.html)
+- [File System](https://nodejs.org/dist/latest-v4.x/docs/api/fs.html)
+- [Query String](https://nodejs.org/dist/latest-v4.x/docs/api/querystring.html)
+- [Stream](https://nodejs.org/dist/latest-v4.x/docs/api/stream.html)
+- [String Decoder](https://nodejs.org/dist/latest-v4.x/docs/api/string_decoder.html)
+- [URL](https://nodejs.org/dist/latest-v4.x/docs/api/url.html)
 - Supports for remote modules (Sync/Async).
 
 Please create pull requests to help us add supports for the rest modules of Node.js.
