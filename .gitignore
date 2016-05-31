@@ -1,0 +1,27 @@
+# Folders
+
+/obj
+/lib
+/backup
+
+# do not track my CEF headers
+/include/include
+
+
+# VS files
+
+*.ncb
+*.sdf
+*.suo
+*.user
+
+
+# CB files
+
+*.depend
+*.layout
+
+
+# Other extensions
+
+*.pyc

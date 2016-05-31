@@ -1,2 +1,196 @@
-# nc.js
-Node-CEF - A Node.js implementation for CEF (Chromium Embedded Framework)
+
+# Node-CEF (NC.js)
+
+Node-CEF provides a Node.js module framework for your CEF projects.
+
+It's based on the CEF wrapper API (libcef_dll_wrapper), therefore Node-CEF should be compatible with most CEF3 builds without modifying the `V8` engine or compiling a custom `libcef.dll`.
+
+**Note:** The native (Java Script) modules are completely compatible with Node.js while the built-in and linked (*.node) modules are not ABI compatible, but you can modify these modules and build them with Node-CEF easily.
+
+## Main Features
+
+- Node.js compatible module system for your CEF project.
+- Very simple templates for writing and registering your built-in modules.
+- Debugging modules with Chrome DevTools.
+
+### Currently available modules:
+
+- [Globals](https://nodejs.org/dist/latest-v4.x/docs/api/globals.html) (see [Differences with Node.js](#differences-with-nodejs))
+- [Modules](https://nodejs.org/dist/latest-v4.x/docs/api/modules.html)
+- [OS](https://nodejs.org/dist/latest-v4.x/docs/api/os.html)
+- [VM](https://nodejs.org/dist/latest-v4.x/docs/api/vm.html)
+- [Process](https://nodejs.org/dist/latest-v4.x/docs/api/process.html)
+- [Punycode](https://nodejs.org/dist/latest-v4.x/docs/api/punycode.html)
+- [Utilities](https://nodejs.org/dist/latest-v4.x/docs/api/util.html)
+
+### Security
+
+Any remote accesses to the `ncjs` module is forbidden, only `file://` scheme is the valid source to initialize Node-CEF.
+
+### What's next:
+
+- Supports for remote modules (Sync/Async).
+
+Please create pull requests to help us add supports for the rest modules of Node.js.
+
+## Usages
+
+### Build Node-CEF
+
+Requirement: VS2005 (VC8.0) and above
+
+1. Open Node-Cef.sln with your Visual Studio.
+2. Add your CEF path to "Additional Include Directories" of the Node-CEF project.
+3. Build solution.
+
+### Use Node-CEF in your CEF project
+
+Please add these libraries to your project's "Additional Dependencies":
+
+```
+ncjs.lib
+libcef_dll_wrapper.lib
+libcef.lib
+libuv.lib
+Psapi.lib
+Userenv.lib
+Ws2_32.lib
+Iphlpapi.lib
+```
+
+This sample shows how to integrate Node-CEF in your CEF project:
+```cpp
+#include <include/cef_app.h>
+#include <ncjs/RenderProcessHandler.h>
+
+class MyNodeCefApp : public CefApp, public ncjs::RenderProcessHandler {
+public:
+
+    CefRefPtr<CefRenderProcessHandler> GetRenderProcessHandler() { return this; }
+
+    IMPLEMENT_REFCOUNTING(MyNodeCefApp);
+};
+
+int APIENTRY wWinMain(HINSTANCE hInstance,
+                      HINSTANCE hPrevInstance,
+                      LPTSTR    lpCmdLine,
+                      int       nCmdShow) {
+  const CefMainArgs main_args(hInstance);
+
+  return CefExecuteProcess(main_args, new MyNodeCefApp, NULL);
+}
+```
+What we need to do to integrate Node-CEF into your CEF project is just changing the inheritance from `CefRenderProcessHandler` to `ncjs::RenderProcessHandler` for your `CefApp` based class.
+
+Now your CEF project owns the Node.js module system, you can test it with:
+```js
+ncjs.require('os').
+```
+
+### Add your own built-in module
+
+Codes for MyModule.cpp:
+```cpp
+#include "ncjs/module.h"
+
+namespace ncjs {
+
+class MyModule : public JsObjecT<MyModule> {
+
+    // my_module.foo()
+    NCJS_OBJECT_FUNCTION(Foo)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        retval = CefV8Value::CreateString(NCJS_REFTEXT("Hello Node-CEF!"));
+    }
+
+    // object factory
+
+    NCJS_BEGIN_OBJECT_FACTORY()
+        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("foo"), Foo)
+    NCJS_END_OBJECT_FACTORY()
+
+};
+NCJS_DEFINE_BUILTIN_MODULE(my_module, MyModule);
+
+} // ncjs
+```
+In `RenderProcessHandler::OnNodeCreated()` callback:
+```cpp
+NCJS_DECLARE_BUILTIN_MODULE(MyModule);
+
+void MyNodeCefApp::OnNodeCreated(CefCommandLine& args)
+{
+    ModuleManager::Register(NCJS_BUILTIN_MODULE(MyModule));
+}
+```
+Now you can access `MyModule::Foo()` via Java Script:
+```js
+ncjs.process.binding('my_module').foo();
+```
+
+**Note:** If your render process handler overrides `CefRenderProcessHandler::OnRenderThreadCreated` or `CefRenderProcessHandler::OnWebKitInitialized` methods, please remember to call the corresponding one of `ncjs::RenderProcessHandler`'s in your implementations, otherwise Node-CEF won't work.
+
+## Differences with Node.js
+
+### Global objects
+
+To accompany general web pages and script, Node-CEF inject a global object identified by `ncjs` to each frame in a sing web page and only will be load when this object get accessed first time, this also improve the performance hit for pages that do not use Node-CEF.
+
+The global `ncjs` object is main module of Node-CEF, all global objects (except the `global` object) defined by Node.js are stored in this object, such as `require`, `process`, etc. You can define a alias for the objects inside `ncjs` for convenience:
+```js
+var require = ncjs.require;
+```
+Now you can use `require` directive just like Node.js provides:
+```js
+var mod = require('a/module');
+```
+
+### Search paths for modules
+
+The search paths for `require()` in a web page is NOT relative to the `*.js` file containing `require()` directives but the page itself. This is because all scripts in a web page share a the shame main module `ncjs` which loaded by the web page.
+
+Considering this folder structure:
+```
+./index.html
+./path/to/general/java_script/code.js
+./path/to/general/java_script/node_modules/my_module.js
+./node_modules/my_module.js
+```
+while code.js:
+```js
+var my_module = ncjs.require('my_module');
+```
+When `index.html` loads code.js, the module located at `./node_modules/my_module.js` will be loaded but the `./path/to/general/java_script/node_modules/my_module.js` will be invisible to Node-CEF. Try `test/require` for a completed test.
+
+**Note:** All these changes only apply to **web pages**, a Node.js module has its `require`, `exports`, etc, as well as search paths, nothing is changed for modules.
+
+
+## Compatibilities
+
+|     CEF 3     | Linux | Mac | Windows |
+|:-------------:|:-----:|:---:|:-------:|
+|  Branch 2704  |   ?   |  ?  |    -    |
+|  Branch 2623  |   ?   |  ?  |    ?    |
+|  Branch 2526  |   ?   |  ?  |    ?    |
+|  Branch 2454  |   ?   |  ?  |  WORKS  |
+|  Branch 2357  |   ?   |  ?  |    ?    |
+|  Branch 2272  |   ?   |  ?  |    ?    |
+|  Branch 2171  |   ?   |  ?  |    ?    |
+|  Branch 2062  |   ?   |  ?  |    ?    |
+|  Branch 1916  |   ?   |  ?  |    ?    |
+|  Branch 1750  |   ?   |  ?  |    ?    |
+|  Branch 1650  |   ?   |  ?  |    ?    |
+|  Branch 1547  |   ?   |  ?  |    ?    |
+|  Branch 1453  |   ?   |  ?  |    ?    |
+
+Please feedback us whether Node-CEF works with your CEF.
+
+Reference / Porting API: [Node.js v4.3.2](https://github.com/nodejs/node/tree/v4.3.2)
+
+
+## License
+
+[Node-CEF](https://github.com/GPBeta/nc.js) is licensed under the MIT license.
+
+> Joshua ([Studio GPBeta](http://www.gpbeta.com/)) @2016
