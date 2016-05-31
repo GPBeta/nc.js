@@ -116,7 +116,11 @@ template <>
 static inline void DoSliceT<UTF8>(const FormatSliceParam& slice,
                                   CefRefPtr<CefV8Value>& retval)
 {
+#ifdef CEF_STRING_TYPE_UTF8
+    const CefString str(slice.buf->Data() + slice.pos, slice.len, false);
+#else
     const std::string str(slice.buf->Data() + slice.pos, slice.len);
+#endif // CEF_STRING_TYPE_UTF8
     retval = CefV8Value::CreateString(str);
 }
 
