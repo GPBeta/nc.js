@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8.00"
-	Name="Node-CEF"
+	Name="libcef_node"
 	ProjectGUID="{C7FD05DE-D707-43F1-85D2-417E941AD857}"
 	RootNamespace="NodeCEF"
 	Keyword="Win32Proj"
@@ -21,7 +21,7 @@
 		<Configuration
 			Name="Debug|Win32"
 			OutputDirectory="$(SolutionDir)\lib\win32d"
-			IntermediateDirectory="$(SolutionDir)\obj\win32d\ncjs"
+			IntermediateDirectory="$(SolutionDir)\obj\win32d\cef_node"
 			ConfigurationType="4"
 			CharacterSet="1"
 			WholeProgramOptimization="0"
@@ -69,7 +69,6 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="$(OutDir)\ncjs.lib"
 				AdditionalLibraryDirectories="$(SolutionDir)\lib\win32d"
 			/>
 			<Tool
@@ -91,7 +90,7 @@
 		<Configuration
 			Name="Debug|x64"
 			OutputDirectory="$(SolutionDir)\lib\win64d"
-			IntermediateDirectory="$(SolutionDir)\obj\win64d\ncjs"
+			IntermediateDirectory="$(SolutionDir)\obj\win64d\cef_node"
 			ConfigurationType="4"
 			CharacterSet="1"
 			WholeProgramOptimization="0"
@@ -141,7 +140,6 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="$(OutDir)\ncjs.lib"
 				AdditionalLibraryDirectories="$(SolutionDir)\lib\win64d"
 			/>
 			<Tool
@@ -163,7 +161,7 @@
 		<Configuration
 			Name="Release|Win32"
 			OutputDirectory="$(SolutionDir)\lib\win32"
-			IntermediateDirectory="$(SolutionDir)\obj\win32\ncjs"
+			IntermediateDirectory="$(SolutionDir)\obj\win32\cef_node"
 			ConfigurationType="4"
 			CharacterSet="1"
 			WholeProgramOptimization="1"
@@ -210,7 +208,6 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="$(OutDir)\ncjs.lib"
 				AdditionalLibraryDirectories="$(SolutionDir)\lib\win32"
 			/>
 			<Tool
@@ -232,7 +229,7 @@
 		<Configuration
 			Name="Release|x64"
 			OutputDirectory="$(SolutionDir)\lib\win64"
-			IntermediateDirectory="$(SolutionDir)\obj\win64\ncjs"
+			IntermediateDirectory="$(SolutionDir)\obj\win64\cef_node"
 			ConfigurationType="4"
 			CharacterSet="1"
 			WholeProgramOptimization="1"
@@ -281,7 +278,6 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="$(OutDir)\ncjs.lib"
 				AdditionalLibraryDirectories="$(SolutionDir)\lib\win64"
 			/>
 			<Tool

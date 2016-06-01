@@ -58,7 +58,7 @@ Requirement: VS2005 (VC8.0) and above
 Please add these libraries to your project's "Additional Dependencies":
 
 ```
-ncjs.lib
+libcef_node.lib
 libcef_dll_wrapper.lib
 libcef.lib
 libuv.lib
