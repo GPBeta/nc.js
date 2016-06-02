@@ -287,15 +287,15 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath="..\src\native\assert.js"
+				RelativePath=".\src\native\assert.js"
 				>
 			</File>
 			<File
-				RelativePath="..\src\native\buffer.js"
+				RelativePath=".\src\native\buffer.js"
 				>
 			</File>
 			<File
-				RelativePath="..\src\native\constants.js"
+				RelativePath=".\src\native\constants.js"
 				>
 			</File>
 			<File
@@ -303,23 +303,23 @@
 				>
 			</File>
 			<File
-				RelativePath="..\src\native\fs.js"
+				RelativePath=".\src\native\fs.js"
 				>
 			</File>
 			<File
-				RelativePath="..\src\native\module.js"
+				RelativePath=".\src\native\module.js"
 				>
 			</File>
 			<File
-				RelativePath="..\src\native\nc.js"
+				RelativePath=".\src\native\nc.js"
 				>
 			</File>
 			<File
-				RelativePath="..\src\native\os.js"
+				RelativePath=".\src\native\os.js"
 				>
 			</File>
 			<File
-				RelativePath="..\src\native\path.js"
+				RelativePath=".\src\native\path.js"
 				>
 			</File>
 			<File
@@ -331,11 +331,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\src\native\util.js"
+				RelativePath=".\src\native\util.js"
 				>
 			</File>
 			<File
-				RelativePath="..\src\native\vm.js"
+				RelativePath=".\src\native\vm.js"
 				>
 			</File>
 			<Filter
@@ -350,11 +350,11 @@
 					>
 				</File>
 				<File
-					RelativePath="..\src\native\internal\module.js"
+					RelativePath=".\src\native\internal\module.js"
 					>
 				</File>
 				<File
-					RelativePath="..\src\native\internal\util.js"
+					RelativePath=".\src\native\internal\util.js"
 					>
 				</File>
 			</Filter>
