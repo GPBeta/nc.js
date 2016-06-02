@@ -452,7 +452,7 @@ Module._initPaths = function() {
     var homeDir = process.env.HOME;
   }
 
-  var paths = [path.resolve(process.execPath, '..', '..', 'lib', 'node')];
+  var paths = [path.resolve(process.execPath, '..', 'lib', 'node')];
 
   if (homeDir) {
     paths.unshift(path.resolve(homeDir, '.node_libraries'));
