@@ -178,21 +178,21 @@ When `index.html` loads code.js, the module located at `./node_modules/my_module
 
 ## Compatibilities
 
-|     CEF 3     | Linux | Mac | Windows |
-|:-------------:|:-----:|:---:|:-------:|
-|  Branch 2704  |   ?   |  ?  |    -    |
-|  Branch 2623  |   ?   |  ?  |    ?    |
-|  Branch 2526  |   ?   |  ?  |    ?    |
-|  Branch 2454  |   ?   |  ?  |  WORKS  |
-|  Branch 2357  |   ?   |  ?  |    ?    |
-|  Branch 2272  |   ?   |  ?  |    ?    |
-|  Branch 2171  |   ?   |  ?  |    ?    |
-|  Branch 2062  |   ?   |  ?  |    ?    |
-|  Branch 1916  |   ?   |  ?  |    ?    |
-|  Branch 1750  |   ?   |  ?  |    ?    |
-|  Branch 1650  |   ?   |  ?  |    ?    |
-|  Branch 1547  |   ?   |  ?  |    ?    |
-|  Branch 1453  |   ?   |  ?  |    ?    |
+|     CEF 3     | Chromium | Linux | Mac | Windows |
+|:-------------:|:--------:|:-----:|:---:|:-------:|
+|  Branch 2704  |   51.0   |   ?   |  ?  |    -    |
+|  Branch 2623  |   49.0   |   ?   |  ?  |    ?    |
+|  Branch 2526  |   47.0   |   ?   |  ?  |    ?    |
+|  Branch 2454  |   45.0   |   ?   |  ?  |  WORKS  |
+|  Branch 2357  |   43.0   |   ?   |  ?  |    ?    |
+|  Branch 2272  |   41.0   |   ?   |  ?  |    ?    |
+|  Branch 2171  |   39.0   |   ?   |  ?  |    ?    |
+|  Branch 2062  |   37.0   |   ?   |  ?  |    ?    |
+|  Branch 1916  |   35.0   |   ?   |  ?  |    ?    |
+|  Branch 1750  |   33.0   |   ?   |  ?  |    ?    |
+|  Branch 1650  |   31.0   |   ?   |  ?  |    ?    |
+|  Branch 1547  |   29.0   |   ?   |  ?  |    ?    |
+|  Branch 1453  |   27.0   |   ?   |  ?  |    ?    |
 
 Please feedback us whether Node-CEF works with your CEF.
 
