@@ -87,9 +87,10 @@ static inline bool Url2Path(const CefString& url, CefString& filePath)
         }
         // remove first slash
         path += 1;
+        len -=1;
     } // else /root/A/B.html
 
-    filePath = path;
+    filePath = CefURIDecode(CefString(path, len, false), true, UU_SPACES);
 
     return true;
 }
