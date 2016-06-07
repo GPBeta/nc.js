@@ -280,6 +280,15 @@ class BufferPrototype : public JsObjecT<BufferPrototype> {
 
 class BindingObject : public JsObjecT<BindingObject> {
 
+    static inline void WrapBuffer(Buffer* buffer, CefRefPtr<CefV8Value>& retval)
+    {
+        retval = CefV8Value::CreateObject(NULL);
+        retval->SetValue(consts::str_length,
+                         CefV8Value::CreateUInt(unsigned(buffer->Size())),
+                         V8_PROPERTY_ATTRIBUTE_READONLY);
+        retval->SetUserData(buffer);
+    }
+
     // createBuffer()
     NCJS_OBJECT_FUNCTION(CreateBuffer)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
@@ -287,9 +296,8 @@ class BindingObject : public JsObjecT<BindingObject> {
         CefRefPtr<Environment> env = Environment::Get(CefV8Context::GetCurrentContext());
 
         NCJS_CHECK(args.size() == 1);
-        
-        retval = CefV8Value::CreateObject(NULL);
-        retval->SetUserData(Buffer::Create(env, args[0]->GetUIntValue()));
+
+        WrapBuffer(Buffer::Create(env, args[0]->GetUIntValue()), retval);
     }
 
     // subArray()
@@ -304,8 +312,7 @@ class BindingObject : public JsObjecT<BindingObject> {
         Buffer* buffer = Buffer::CreateUninitialized(slice.len);
         memcpy(buffer->Data(), slice.buf->Data() + slice.pos, slice.len);
 
-        retval = CefV8Value::CreateObject(NULL);
-        retval->SetUserData(buffer);
+        WrapBuffer(buffer, retval);
     }
 
     // object builder

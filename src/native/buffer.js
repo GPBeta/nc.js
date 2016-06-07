@@ -26,7 +26,6 @@ BufferWrap.prototype.subarray = bindingObj.subarray;
 
 function createBuffer(size) {
   const ui8 = bindingObj.createBuffer(size);
-  ui8.length = size;
   Object.setPrototypeOf(ui8, Buffer.prototype);
   return ui8;
 }
