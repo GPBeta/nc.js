@@ -278,7 +278,7 @@ class BufferPrototype : public JsObjecT<BufferPrototype> {
     NCJS_END_OBJECT_BUILDER()
 };
 
-class BufferObject : public JsObjecT<BufferObject> {
+class BindingObject : public JsObjecT<BindingObject> {
 
     // createBuffer()
     NCJS_OBJECT_FUNCTION(CreateBuffer)(CefRefPtr<CefV8Value> object,
@@ -450,7 +450,7 @@ class ModuleBuffer : public JsObjecT<ModuleBuffer> {
         BufferPrototype::ObjectBuilder(env, context, args[0]);
         
         NCJS_CHECK(NCJS_ARG_IS(Object, args, 1));
-        BufferObject::ObjectBuilder(env, context, args[1]);
+        BindingObject::ObjectBuilder(env, context, args[1]);
     }
 
     // object factory
