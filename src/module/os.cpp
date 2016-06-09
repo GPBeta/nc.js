@@ -35,27 +35,6 @@ namespace ncjs {
 /// implementation
 /// ============================================================================
 
-enum Endianness { LITTLE_ENDIAN, BIG_ENDIAN };
-
-inline enum Endianness GetEndianness() {
-  // Constant-folded by the compiler.
-  const union {
-    uint8_t u8[2];
-    uint16_t u16;
-  } u = {
-    { 1, 0 }
-  };
-  return u.u16 == 1 ? LITTLE_ENDIAN : BIG_ENDIAN;
-}
-
-inline bool IsLittleEndian() {
-  return GetEndianness() == LITTLE_ENDIAN;
-}
-
-inline bool IsBigEndian() {
-  return GetEndianness() == BIG_ENDIAN;
-}
-
 /// ----------------------------------------------------------------------------
 /// TestObject
 /// ----------------------------------------------------------------------------
@@ -348,7 +327,7 @@ class ModuleOS : public JsObjecT<ModuleOS> {
         NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("getLoadAvg"),            GetLoadAvg)
         NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("getHomeDirectory"),      GetHomeDirectory)
 		NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("getInterfaceAddresses"), GetInterfaceAddresses)
-		NCJS_MAP_OBJECT(Bool,    NCJS_REFTEXT("isBigEndian"),           IsBigEndian())
+        NCJS_MAP_OBJECT(Bool,    NCJS_REFTEXT("isBigEndian"),           Environment::IsBE())
 
         NCJS_MAP_OBJECT_FACTORY(NCJS_REFTEXT("testObject"), TestObject)
     NCJS_END_OBJECT_FACTORY()

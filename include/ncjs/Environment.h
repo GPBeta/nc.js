@@ -89,6 +89,22 @@ public:
     /// Static Functions
     /// --------------------------------------------------------------
 
+    enum Endianness { LITTLE_ENDIAN, BIG_ENDIAN };
+
+    static bool IsLE() { return GetEndianness() == LITTLE_ENDIAN; }
+    static bool IsBE() { return GetEndianness() == BIG_ENDIAN; }
+
+    static enum Endianness GetEndianness() {
+#ifndef CEF_INCLUDE_BASE_CEF_BUILD_H_
+#error cef_build.h required
+#endif
+#if ARCH_CPU_LITTLE_ENDIAN
+        return LITTLE_ENDIAN;
+#else
+        return BIG_ENDIAN;
+#endif
+    }
+
     static uv_loop_t* GetEventLoop() { return s_loop; }
 
     static double GetProcessStartTime() { return s_startTime; }
