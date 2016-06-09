@@ -23,6 +23,8 @@
 #include "ncjs/module.h"
 #include "ncjs/constants.h"
 
+#include <include/cef_parser.h>
+
 #include <signal.h>
 
 namespace ncjs {
@@ -109,19 +111,144 @@ public:
     unsigned len;
 };
 
+template <class T>
+static void force_ascii_slow(const char* src, size_t len, T* dst) {
+    for (size_t i = 0; i < len; ++i)
+        dst[i] = src[i] & 0x7f;
+}
+
+#ifdef CEF_STRING_TYPE_UTF8
+static void force_ascii(const char* src, size_t len, char* dst) {
+    if (len < 16) {
+        force_ascii_slow(src, len, dst);
+        return;
+    }
+
+    const size_t bytes_per_word = sizeof(uintptr_t);
+    const size_t align_mask = bytes_per_word - 1;
+    const size_t src_unalign = reinterpret_cast<uintptr_t>(src) & align_mask;
+    const size_t dst_unalign = reinterpret_cast<uintptr_t>(dst) & align_mask;
+
+    if (src_unalign > 0) {
+        if (src_unalign == dst_unalign) {
+            const size_t unalign = bytes_per_word - src_unalign;
+            force_ascii_slow(src, unalign, dst);
+            src += unalign;
+            dst += unalign;
+            len -= src_unalign;
+        } else {
+            force_ascii_slow(src, len, dst);
+            return;
+        }
+    }
+
+#if defined(_WIN64) || defined(_LP64)
+    const uintptr_t mask = ~0x8080808080808080ll;
+#else
+    const uintptr_t mask = ~0x80808080l;
+#endif
+
+    const uintptr_t* srcw = reinterpret_cast<const uintptr_t*>(src);
+    uintptr_t* dstw = reinterpret_cast<uintptr_t*>(dst);
+
+    for (size_t i = 0, n = len / bytes_per_word; i < n; ++i)
+        dstw[i] = srcw[i] & mask;
+
+    const size_t remainder = len & align_mask;
+    if (remainder > 0) {
+        const size_t offset = len - remainder;
+        force_ascii_slow(src + offset, remainder, dst + offset);
+    }
+}
+#else // UTF16 / UTF32
+#define force_ascii force_ascii_slow
+#endif // CEF_STRING_TYPE_UTF8
+
 template <Encoding E>
-static inline void DoSliceT(const FormatSliceParam& slice, CefRefPtr<CefV8Value>& retval);
+static inline CefRefPtr<CefV8Value> DoSliceT(const FormatSliceParam& slice);
 
 template <>
-static inline void DoSliceT<UTF8>(const FormatSliceParam& slice,
-                                  CefRefPtr<CefV8Value>& retval)
+static inline CefRefPtr<CefV8Value> DoSliceT<ASCII>(const FormatSliceParam& slice)
+{
+    const char* buf = slice.buf->Data() + slice.pos;
+
+    std::vector<cef_char_t> dst(slice.len);
+    force_ascii(buf, slice.len, &dst[0]);
+
+    return CefV8Value::CreateString(CefString(&dst[0], slice.len, false));
+}
+
+template <>
+static inline CefRefPtr<CefV8Value> DoSliceT<BINARY>(const FormatSliceParam& slice)
+{
+    const char* buf = slice.buf->Data() + slice.pos;
+    const size_t len = slice.len / sizeof(cef_char_t);
+
+    const CefString str(reinterpret_cast<const cef_char_t*>(buf), len, false);
+
+    return CefV8Value::CreateString(str);
+}
+
+template <>
+static inline CefRefPtr<CefV8Value> DoSliceT<BASE64>(const FormatSliceParam& slice)
+{
+    const char* buf = slice.buf->Data() + slice.pos;
+    return CefV8Value::CreateString(CefBase64Encode(buf, slice.len));
+}
+
+template <>
+static inline CefRefPtr<CefV8Value> DoSliceT<HEX>(const FormatSliceParam& slice)
+{
+    const char* BIT2HEX = "0123456789abcdef";
+    const char* buf = slice.buf->Data() + slice.pos;
+    const size_t len = slice.len * 2;
+
+    std::vector<cef_char_t> dst(len);
+    for (size_t i = 0, k = 0; i < slice.len; ++i) {
+        const unsigned val = buf[i];
+        dst[k] = BIT2HEX[val >> 4]; ++k;
+        dst[k] = BIT2HEX[val & 15]; ++k;
+    }
+
+    return CefV8Value::CreateString(CefString(&dst[0], len, false));
+}
+
+template <>
+static inline CefRefPtr<CefV8Value> DoSliceT<UCS2>(const FormatSliceParam& slice)
+{    
+    const char* buf = slice.buf->Data() + slice.pos;
+    const size_t len = slice.len / 2;
+    const bool aligned = reinterpret_cast<size_t>(buf) % 2 == 0;
+
+    if (Environment::IsLE() && aligned) { 
+#ifdef CEF_STRING_TYPE_UTF16
+        const CefString str(reinterpret_cast<const cef_char_t*>(buf), len, false);
+#else
+        const base::string16 str(reinterpret_cast<const base::char16*>(buf), len);
+#endif // CEF_STRING_TYPE_UTF16
+        return CefV8Value::CreateString(str);
+    }
+
+    // BE -> LE
+
+    base::string16 dst;
+    dst.reserve(len);
+
+    for (unsigned i = 0; i < slice.len; i += 2)
+      dst.push_back(buf[i] | (buf[i + 1] << 8));
+
+    return CefV8Value::CreateString(dst);
+}
+
+template <>
+static inline CefRefPtr<CefV8Value> DoSliceT<UTF8>(const FormatSliceParam& slice)
 {
 #ifdef CEF_STRING_TYPE_UTF8
     const CefString str(slice.buf->Data() + slice.pos, slice.len, false);
 #else
     const std::string str(slice.buf->Data() + slice.pos, slice.len);
 #endif // CEF_STRING_TYPE_UTF8
-    retval = CefV8Value::CreateString(str);
+    return CefV8Value::CreateString(str);
 }
 
 template <Encoding E>
@@ -134,7 +261,7 @@ static inline void SliceT(CefRefPtr<CefV8Value> object, const CefV8ValueList& ar
         return;
 
     if (slice.len)
-        DoSliceT<E>(slice, retval);
+        retval = DoSliceT<E>(slice);
 }
 
 /// ----------------------------------------------------------------------------
@@ -181,37 +308,36 @@ class BufferPrototype : public JsObjecT<BufferPrototype> {
     NCJS_OBJECT_FUNCTION(AsciiSlice)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
+        SliceT<ASCII>(object, args, retval, except);
     }
     // buffer.base64Slice()
     NCJS_OBJECT_FUNCTION(Base64Slice)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
+        SliceT<BASE64>(object, args, retval, except);
     }
     // buffer.binarySlice()
     NCJS_OBJECT_FUNCTION(BinarySlice)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
+        SliceT<BINARY>(object, args, retval, except);
     }
     // buffer.hexSlice()
     NCJS_OBJECT_FUNCTION(HexSlice)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
+        SliceT<HEX>(object, args, retval, except);
     }
     // buffer.ucs2Slice()
     NCJS_OBJECT_FUNCTION(Ucs2Slice)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
+        SliceT<UCS2>(object, args, retval, except);
     }
     // buffer.utf8Slice()
     NCJS_OBJECT_FUNCTION(Utf8Slice)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        // TODO: handling encoding errors
         SliceT<UTF8>(object, args, retval, except);
     }
     // buffer.asciiWrite()
