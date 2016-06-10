@@ -31,8 +31,8 @@
 
 #define SYNC_RESULT err
 
-#define TYPE_ERROR(_MSG) Environment::TypeException(NCJS_TEXT(_MSG), except)
-#define RANGE_ERROR(_MSG) TYPE_ERROR(_MSG)
+#define  TYPE_ERROR(_MSG) Environment::TypeException(NCJS_TEXT(_MSG), except)
+#define RANGE_ERROR(_MSG) Environment::RangeException(NCJS_TEXT(_MSG), except)
 
 /// ----------------------------------------------------------------------------
 /// headers

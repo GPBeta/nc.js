@@ -117,7 +117,13 @@ public:
 
     static void ErrorException(int err, const char* syscall,
                                const char* msg, CefString& except);
-    
+
+    template <unsigned N>
+    static void RangeException(const cef_char_t (&msg)[N], CefString& except)
+    {
+        except.FromString(msg, N, false);
+    }
+
     template <unsigned N>
     static void TypeException(const cef_char_t (&msg)[N], CefString& except)
     {
