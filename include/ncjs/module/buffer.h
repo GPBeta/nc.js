@@ -29,8 +29,10 @@ class Environment;
 class Buffer : public UserData {
 public:
 
-    char* Data() { return m_buffer; }
+    char* Data() const { return m_buffer; }
     size_t Size() const { return m_size; }
+
+    Buffer* SubBuffer(size_t offset, size_t size) const;
 
     /// Static Functions
     /// --------------------------------------------------------------
@@ -60,16 +62,18 @@ public:
     }
 
     static Buffer* Create(CefRefPtr<Environment> env, size_t size);
-    static Buffer* CreateUninitialized(size_t size);
+    static Buffer* Create(size_t size); // despise buffer object flags
 
 private:
 
-    Buffer(char* buffer, size_t size) :
-       UserData(BUFFER), m_buffer(buffer), m_size(size) {}
-    ~Buffer() { free(m_buffer); }
+    Buffer(char* buffer, size_t size, const Buffer* owner = NULL) :
+       UserData(BUFFER), m_owner(owner), m_buffer(buffer), m_size(size) {}
+    ~Buffer() { if (NULL == m_owner.get()) free(m_buffer); }
     
     /// Declarations
     /// -----------------
+
+    CefRefPtr<const Buffer> m_owner;
 
     char* m_buffer;
     size_t m_size;

@@ -45,6 +45,13 @@ static const int STRING_MAX_LENGTH = (1 << 28) - 16;
 /// implementation
 /// ============================================================================
 
+Buffer* Buffer::SubBuffer(size_t offset, size_t size) const
+{
+    NCJS_ASSERT(offset + size < m_size);
+
+    return new Buffer(m_buffer + offset, size, this);
+}
+
 inline Buffer* Buffer::Create(CefRefPtr<Environment> env, size_t size)
 {
     Environment::BufferObjectInfo& info = env->GetBufferObjectInfo();
@@ -55,7 +62,7 @@ inline Buffer* Buffer::Create(CefRefPtr<Environment> env, size_t size)
     return new Buffer(static_cast<char*>(buffer), size);
 }
 
-inline Buffer* Buffer::CreateUninitialized(size_t size)
+inline Buffer* Buffer::Create(size_t size)
 {
     return new Buffer(static_cast<char*>(malloc(size)), size);
 }
@@ -469,10 +476,7 @@ class BindingObject : public JsObjecT<BindingObject> {
         if (slice.buf == NULL)
             return;
 
-        Buffer* buffer = Buffer::CreateUninitialized(slice.len);
-        memcpy(buffer->Data(), slice.buf->Data() + slice.pos, slice.len);
-
-        WrapBuffer(buffer, retval);
+        WrapBuffer(slice.buf->SubBuffer(slice.pos, slice.len), retval);
     }
 
     // object builder
