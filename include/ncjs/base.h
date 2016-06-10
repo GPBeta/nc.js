@@ -93,6 +93,17 @@ static inline unsigned ArraySize(const T (&src)[N])
     return N;
 }
 
+template<class T>
+static inline const T& Max(const T& a, const T& b)
+{
+    return a > b ? a : b;
+}
+
+template<class T>
+static inline const T& Min(const T& a, const T& b)
+{
+    return a < b ? a : b;
+}
 
 } // ncjs
 
