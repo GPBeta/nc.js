@@ -12,7 +12,8 @@
 /// declarations
 /// ============================================================================
 
-#define CALLER_ERROR Environment::ErrorException(NCJS_TEXT("Caller must be a buffer"), except)
+#define BUFFER_ERROR Environment::ErrorException(NCJS_TEXT("Argument should be a Buffer"), except)
+#define  INDEX_ERROR Environment::RangeException(NCJS_TEXT("Out of range index"), except)
 
 /// ----------------------------------------------------------------------------
 /// headers
@@ -67,7 +68,7 @@ public:
         buf(NULL), pos(0), len(0)
     {
         if (!Buffer::HasInstance(object)) {
-            CALLER_ERROR;
+            BUFFER_ERROR;
             return;
         }
 
@@ -380,7 +381,40 @@ class BufferPrototype : public JsObjecT<BufferPrototype> {
     NCJS_OBJECT_FUNCTION(Copy)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
+        if (!Buffer::HasInstance(object) ||
+            !args.size() || !Buffer::HasInstance(args[0]))
+            return BUFFER_ERROR;
+
+        Buffer* src = Buffer::Get(object);
+        Buffer* dst = Buffer::Get(args[0]);
+
+        size_t dstStart = 0;
+        size_t srcStart = 0;
+        size_t srcEnd = src->Size();
+
+        if (NCJS_ARG_IS(UInt, args, 1)) {
+            dstStart = args[1]->GetUIntValue();
+            if (dstStart > dst->Size())
+                return INDEX_ERROR;
+        }
+        if (NCJS_ARG_IS(UInt, args, 2)) {
+            srcStart = args[2]->GetUIntValue();
+            if (srcStart > src->Size())
+                return INDEX_ERROR;
+        }
+        if (NCJS_ARG_IS(UInt, args, 3)) {
+            srcEnd = args[3]->GetUIntValue();
+            if (srcEnd > src->Size() || srcStart > srcEnd)
+                return INDEX_ERROR;
+        }
+
+        const size_t toCopy = Min(Min(srcEnd - srcStart, dst->Size() - dstStart),
+                                  src->Size() - srcStart);
+
+        if (toCopy)
+            memmove(dst->Data() + dstStart, src->Data() + srcStart, toCopy);
+
+        retval = CefV8Value::CreateUInt(unsigned(toCopy));
     }
 
     // object builder
