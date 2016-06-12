@@ -39,12 +39,12 @@ public:
 
     static Buffer* Get(CefRefPtr<CefV8Value> object)
     {
-        return static_cast<Buffer*>(object->GetUserData().get());
-    }
+        CefRefPtr<CefBase> data = object->GetUserData();
+        // NOTE: User data could be NULL.
+        if (IsTypeOf(data, BUFFER))
+            return static_cast<Buffer*>(data.get());
 
-    static bool HasInstance(CefRefPtr<CefV8Value> object)
-    {
-        return IsTypeOf(object->GetUserData(), BUFFER);
+        return NULL;
     }
 
     static bool IsWithinBounds(size_t off, size_t len, size_t max) {

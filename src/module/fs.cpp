@@ -281,11 +281,13 @@ class ModuleFS : public JsObjecT<ModuleFS> {
      */
     NCJS_OBJECT_FUNCTION(Read)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except) {
+        Buffer* buffer = NULL;
+
         if (args.size() < 2)
             return TYPE_ERROR("fd and buffer are required");
         if (!args[0]->IsInt())
             return TYPE_ERROR("fd must be a file descriptor");
-        if (!Buffer::HasInstance(args[1]))
+        if (!(buffer = Buffer::Get(args[1])))
             return TYPE_ERROR("Second argument needs to be a buffer");
 
         int fd = args[0]->GetIntValue();
@@ -295,7 +297,6 @@ class ModuleFS : public JsObjecT<ModuleFS> {
         unsigned off = 0;
         char* buf = NULL;
 
-        CefRefPtr<Buffer> buffer = Buffer::Get(args[1]);
 
         if (NCJS_ARG_IS(Int, args, 2))
             off = args[2]->GetUIntValue();

@@ -74,49 +74,41 @@ public:
                      const CefV8ValueList& args, CefString& except) :
         buf(NULL), pos(0), len(0)
     {
-        if (!Buffer::HasInstance(object)) {
+        if (!(buf = Buffer::Get(object))) {
             BUFFER_ERROR;
             return;
         }
 
-        buf = Buffer::Get(object);
-
-        assert(buf != NULL);
-
-        len = unsigned(buf->Size());
+        len = buf->Size();
 
         if (len == 0)
             return;
 
-        int end = len;
+        int end = int(len);
         if (NCJS_ARG_IS(Int, args, 0)) { 
             pos = args[0]->GetIntValue();
             if (pos < 0) {
-                pos += len;
+                pos += int(len);
                 if (pos < 0)
                     pos = 0;
-            } else if (unsigned(pos) > len) {
-                pos = len;
-            }
-
-            if (NCJS_ARG_IS(Int, args, 1)) {
-                end = args[1]->GetIntValue();
-                if (end < 0)
-                    end = -end;
-                if (unsigned(end) > len)
-                    end = len;
+            } else if (size_t(pos) > len) {
+                pos = int(len);
             }
         }
+        if (NCJS_ARG_IS(Int, args, 1)) {
+            end = args[1]->GetIntValue();
+            if (end < 0)
+                end = -end;
+            if (size_t(end) > len)
+                end = int(len);
+        }
 
-        len = end - pos;
-
-        if (len < 0)
-            len = 0;
+        len = end > pos ? end - pos : 0;
     }
 
-    Buffer*  buf;
-    int      pos;
-    unsigned len;
+    Buffer* buf;
+    int     pos;
+    size_t  len;
 };
 
 template <class T>
@@ -388,12 +380,11 @@ class BufferPrototype : public JsObjecT<BufferPrototype> {
     NCJS_OBJECT_FUNCTION(Copy)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        if (!Buffer::HasInstance(object) ||
-            !args.size() || !Buffer::HasInstance(args[0]))
-            return BUFFER_ERROR;
+        Buffer* src = NULL;
+        Buffer* dst = NULL;
 
-        Buffer* src = Buffer::Get(object);
-        Buffer* dst = Buffer::Get(args[0]);
+        if (!args.size() || !(src = Buffer::Get(object)) || !(dst = Buffer::Get(args[0])))
+            return BUFFER_ERROR;
 
         size_t dstStart = 0;
         size_t srcStart = 0;

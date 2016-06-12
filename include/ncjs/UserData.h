@@ -40,10 +40,10 @@ public:
     
     static bool IsTypeOf(const CefRefPtr<CefBase>& data, Type type)
     {
-        if (!data.get())
-            return false;
+        if (CefBase* p = data.get())
+            return static_cast<UserData*>(p)->IsTypeOf(type);
 
-        return static_cast<UserData*>(data.get())->IsTypeOf(type);
+        return false;
     }
 
     /// Constructors & Destructor
