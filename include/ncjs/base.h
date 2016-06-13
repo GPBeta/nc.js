@@ -87,10 +87,38 @@ extern "C" bool ncjsRegisterModule(module_t* module);
 
 // helper functions
 
+template <class T, class V>
+static inline T& As(V& v)
+{
+    return reinterpret_cast<T&>(v);
+}
+
+template <class T, class V>
+static inline T To(const V& v)
+{
+    return reinterpret_cast<T>(v);
+}
+
 template <class T, unsigned N>
 static inline unsigned ArraySize(const T (&src)[N])
 {
     return N;
+}
+
+template <class T>
+static inline void ReverseArray(T* src, size_t len)
+{
+    for (T* end = src + len - 1; src < end; ++src, --end) {
+        const T temp = *src;
+        *src = *end;
+        *end = temp;
+    }
+}
+
+template <class T, unsigned N>
+static inline void ReverseArray(T (&src)[N])
+{
+    ReverseArray(src, N);
 }
 
 template<class T>

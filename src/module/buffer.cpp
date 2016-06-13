@@ -126,8 +126,8 @@ static void force_ascii(const char* src, size_t len, char* dst) {
 
     const size_t bytes_per_word = sizeof(uintptr_t);
     const size_t align_mask = bytes_per_word - 1;
-    const size_t src_unalign = reinterpret_cast<uintptr_t>(src) & align_mask;
-    const size_t dst_unalign = reinterpret_cast<uintptr_t>(dst) & align_mask;
+    const size_t src_unalign = To<uintptr_t>(src) & align_mask;
+    const size_t dst_unalign = To<uintptr_t>(dst) & align_mask;
 
     if (src_unalign > 0) {
         if (src_unalign == dst_unalign) {
@@ -148,8 +148,8 @@ static void force_ascii(const char* src, size_t len, char* dst) {
     const uintptr_t mask = ~0x80808080l;
 #endif
 
-    const uintptr_t* srcw = reinterpret_cast<const uintptr_t*>(src);
-    uintptr_t* dstw = reinterpret_cast<uintptr_t*>(dst);
+    const uintptr_t* srcw = To<const uintptr_t*>(src);
+          uintptr_t* dstw = To<uintptr_t*>(dst);
 
     for (size_t i = 0, n = len / bytes_per_word; i < n; ++i)
         dstw[i] = srcw[i] & mask;
@@ -184,7 +184,7 @@ static inline CefRefPtr<CefV8Value> DoSliceT<BINARY>(const FormatSliceParam& sli
     const char* buf = slice.buf->Data() + slice.pos;
     const size_t len = slice.len / sizeof(cef_char_t);
 
-    const CefString str(reinterpret_cast<const cef_char_t*>(buf), len, false);
+    const CefString str(To<const cef_char_t*>(buf), len, false);
 
     return CefV8Value::CreateString(str);
 }
@@ -218,13 +218,13 @@ static inline CefRefPtr<CefV8Value> DoSliceT<UCS2>(const FormatSliceParam& slice
 {    
     const char* buf = slice.buf->Data() + slice.pos;
     const size_t len = slice.len / 2;
-    const bool aligned = reinterpret_cast<size_t>(buf) % 2 == 0;
+    const bool aligned = To<size_t>(buf) % 2 == 0;
 
     if (Environment::IsLE() && aligned) { 
 #ifdef CEF_STRING_TYPE_UTF16
-        const CefString str(reinterpret_cast<const cef_char_t*>(buf), len, false);
+        const CefString str(To<const cef_char_t*>(buf), len, false);
 #else
-        const base::string16 str(reinterpret_cast<const base::char16*>(buf), len);
+        const base::string16 str(To<const base::char16*>(buf), len);
 #endif // CEF_STRING_TYPE_UTF16
         return CefV8Value::CreateString(str);
     }
