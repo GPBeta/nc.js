@@ -587,21 +587,93 @@ class ModuleBuffer : public JsObjecT<ModuleBuffer> {
     NCJS_OBJECT_FUNCTION(ByteLengthUtf8)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
+        NCJS_CHECK(NCJS_ARG_IS(String, args, 0));
+
+#ifdef CEF_STRING_TYPE_UTF8
+        const size_t len = args[0]->GetStringValue().length();
+#else
+        const size_t len = args[0]->GetStringValue().ToString().length();
+#endif // CEF_STRING_TYPE_UTF8
+
+        retval = CefV8Value::CreateUInt(unsigned(len));
     }
 
     // buffer.compare()
     NCJS_OBJECT_FUNCTION(Compare)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
+        Buffer* aBuf = NULL;
+        Buffer* bBuf = NULL;
+
+        if (args.size() < 2 ||
+            !(aBuf = Buffer::Get(args[0])) || !(bBuf = Buffer::Get(args[1])))
+            return BUFFER_ERROR;
+
+        const size_t len = Min(aBuf->Size(), bBuf->Size());
+        int res = len > 0 ? memcmp(aBuf->Data(), bBuf->Data(), len) : 0;
+
+        if (res == 0) {
+            if (aBuf->Size() > bBuf->Size())
+                res = 1;
+            else if (aBuf->Size() < bBuf->Size())
+                res = -1;
+        } else {
+            res = res > 0 ? 1 : -1;
+        }
+
+        retval = CefV8Value::CreateInt(res);
     }
 
     // buffer.fill()
     NCJS_OBJECT_FUNCTION(Fill)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
+        NCJS_CHECK(args.size() >= 4);
+
+        Buffer* buf = Buffer::Get(args[0]);
+
+        if (buf == NULL)
+            return BUFFER_ERROR;
+
+        const size_t start = args[2]->GetUIntValue();
+        const size_t end = args[3]->GetUIntValue();
+        const size_t len = end - start;
+
+        NCJS_CHK_LE(len + start, buf->Size());
+
+        if (args[1]->IsInt()) {
+            const int value = args[1]->GetUIntValue() & 0xFF;
+            memset(buf->Data() + start, value, len);
+            return;
+        } // else string
+
+#ifdef CEF_STRING_TYPE_UTF8
+        const CefString str = args[1]->GetStringValue();
+#else
+        const std::string str = args[1]->GetStringValue().ToString();
+#endif // CEF_STRING_TYPE_UTF8
+
+        if (str.length() == 0)
+            return;
+
+        memcpy(buf->Data() + start, str.c_str(), Min(str.length(), len));
+
+        if (str.length() >= len)
+            return;
+
+        size_t filled = str.length();
+        char* src = buf->Data() + start;
+        char* dst = src + filled;
+        while (filled < len - filled) {
+            memcpy(dst, src, filled);
+            dst += filled;
+            filled *= 2;
+        }
+
+        if (filled < len) {
+            memcpy(dst, src, len - filled);
+            filled = len;
+        }
     }
 
     // buffer.indexOfBuffer()
