@@ -532,7 +532,7 @@ class BindingObject : public JsObjecT<BindingObject> {
         if (Buffer* buf = Buffer::Get(object)) {
             const unsigned offset = args[0]->GetUIntValue();
             if (offset < buf->Size())
-                buf->Data()[offset] = char(value);
+                buf->Data()[offset] = As<char>(value);
         }
     }
 
@@ -546,7 +546,7 @@ class BindingObject : public JsObjecT<BindingObject> {
         if (Buffer* buf = Buffer::Get(object)) {
             const unsigned offset = args[0]->GetUIntValue();
             if (offset < buf->Size())
-                retval = CefV8Value::CreateUInt(buf->Data()[offset]);
+                retval = CefV8Value::CreateUInt(As<unsigned char>(buf->Data()[offset]));
         }
     }
 
