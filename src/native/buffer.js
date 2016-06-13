@@ -1,4 +1,4 @@
-// MODIFIED: small changes
+// MODIFIED: low level replacement
 /* eslint-disable require-buffer */
 'use strict';
 
@@ -23,6 +23,9 @@ const kNoZeroFill = 0;
 // we implement a BufferWrap to manager memory binding to a Buffer.
 function BufferWrap() {}
 BufferWrap.prototype.subarray = bindingObj.subarray;
+// NCJS: Uint8Array[] -> BufferWrap.get()/set()
+BufferWrap.prototype.getAt = bindingObj.getAt;
+BufferWrap.prototype.setAt = bindingObj.setAt;
 
 function createBuffer(size) {
   const ui8 = bindingObj.createBuffer(size);
@@ -138,7 +141,7 @@ function fromObject(obj) {
     var length = obj.length;
     var b = allocate(length);
     for (var i = 0; i < length; i++)
-      b[i] = obj[i] & 255;
+      b.setAt(i, obj[i] & 255);
     return b;
   }
 
@@ -157,9 +160,8 @@ function fromObject(obj) {
     else
       length = obj.length;
     var b = allocate(length);
-    for (var i = 0; i < length; i++) {
-      b[i] = obj[i] & 255;
-    }
+    for (var i = 0; i < length; i++)
+      b.setAt(i, obj[i] & 255);
     return b;
   }
 
@@ -167,7 +169,7 @@ function fromObject(obj) {
     var array = obj.data;
     var b = allocate(array.length);
     for (var i = 0; i < array.length; i++)
-      b[i] = array[i] & 255;
+      b.setAt(i, array[i] & 255);
     return b;
   }
 
@@ -505,21 +507,20 @@ Buffer.prototype.fill = function fill(val, start, end) {
 
 
 // XXX remove in v0.13
-Buffer.prototype.get = internalUtil.deprecate(function get(offset) {
+Buffer.prototype.get = function get(offset) {
   offset = ~~offset;
   if (offset < 0 || offset >= this.length)
     throw new RangeError('index out of range');
-  return this[offset];
-}, 'Buffer.get is deprecated. Use array indexes instead.');
-
+  return this.getAt(offset);
+};
 
 // XXX remove in v0.13
-Buffer.prototype.set = internalUtil.deprecate(function set(offset, v) {
+Buffer.prototype.set = function set(offset, v) {
   offset = ~~offset;
   if (offset < 0 || offset >= this.length)
     throw new RangeError('index out of range');
-  return this[offset] = v;
-}, 'Buffer.set is deprecated. Use array indexes instead.');
+  return this.setAt(offset, v);
+};
 
 var writeWarned = false;
 const writeMsg = 'Buffer.write(string, encoding, offset, length) is ' +
@@ -632,11 +633,11 @@ Buffer.prototype.readUIntLE = function(offset, byteLength, noAssert) {
   if (!noAssert)
     checkOffset(offset, byteLength, this.length);
 
-  var val = this[offset];
+  var val = this.getAt(offset);
   var mul = 1;
   var i = 0;
   while (++i < byteLength && (mul *= 0x100))
-    val += this[offset + i] * mul;
+    val += this.getAt(offset + 1) * mul;
 
   return val;
 };
@@ -648,10 +649,10 @@ Buffer.prototype.readUIntBE = function(offset, byteLength, noAssert) {
   if (!noAssert)
     checkOffset(offset, byteLength, this.length);
 
-  var val = this[offset + --byteLength];
+  var val = this.getAt(offset + --byteLength);
   var mul = 1;
   while (byteLength > 0 && (mul *= 0x100))
-    val += this[offset + --byteLength] * mul;
+    val += this.getAt(offset + --byteLength) * mul;
 
   return val;
 };
@@ -661,7 +662,7 @@ Buffer.prototype.readUInt8 = function(offset, noAssert) {
   offset = offset >>> 0;
   if (!noAssert)
     checkOffset(offset, 1, this.length);
-  return this[offset];
+  return this.getAt(offset);
 };
 
 
@@ -669,7 +670,7 @@ Buffer.prototype.readUInt16LE = function(offset, noAssert) {
   offset = offset >>> 0;
   if (!noAssert)
     checkOffset(offset, 2, this.length);
-  return this[offset] | (this[offset + 1] << 8);
+  return this.getAt(offset) | (this.getAt(offset + 1) << 8);
 };
 
 
@@ -677,7 +678,7 @@ Buffer.prototype.readUInt16BE = function(offset, noAssert) {
   offset = offset >>> 0;
   if (!noAssert)
     checkOffset(offset, 2, this.length);
-  return (this[offset] << 8) | this[offset + 1];
+  return (this.getAt(offset) << 8) | this.getAt(offset + 1);
 };
 
 
@@ -686,10 +687,10 @@ Buffer.prototype.readUInt32LE = function(offset, noAssert) {
   if (!noAssert)
     checkOffset(offset, 4, this.length);
 
-  return ((this[offset]) |
-      (this[offset + 1] << 8) |
-      (this[offset + 2] << 16)) +
-      (this[offset + 3] * 0x1000000);
+  return ((this.getAt(offset)) |
+      (this.getAt(offset + 1) << 8) |
+      (this.getAt(offset + 2) << 16)) +
+      (this.getAt(offset + 3) * 0x1000000);
 };
 
 
@@ -698,10 +699,10 @@ Buffer.prototype.readUInt32BE = function(offset, noAssert) {
   if (!noAssert)
     checkOffset(offset, 4, this.length);
 
-  return (this[offset] * 0x1000000) +
-      ((this[offset + 1] << 16) |
-      (this[offset + 2] << 8) |
-      this[offset + 3]);
+  return (this.getAt(offset) * 0x1000000) +
+        ((this.getAt(offset + 1) << 16) |
+         (this.getAt(offset + 2) << 8) |
+          this.getAt(offset + 3));
 };
 
 
@@ -711,11 +712,11 @@ Buffer.prototype.readIntLE = function(offset, byteLength, noAssert) {
   if (!noAssert)
     checkOffset(offset, byteLength, this.length);
 
-  var val = this[offset];
+  var val = this.getAt(offset);
   var mul = 1;
   var i = 0;
   while (++i < byteLength && (mul *= 0x100))
-    val += this[offset + i] * mul;
+    val += this.getAt(offset + i) * mul;
   mul *= 0x80;
 
   if (val >= mul)
@@ -733,9 +734,9 @@ Buffer.prototype.readIntBE = function(offset, byteLength, noAssert) {
 
   var i = byteLength;
   var mul = 1;
-  var val = this[offset + --i];
+  var val = this.getAt(offset + --i);
   while (i > 0 && (mul *= 0x100))
-    val += this[offset + --i] * mul;
+    val += this.getAt(offset + --i) * mul;
   mul *= 0x80;
 
   if (val >= mul)
@@ -749,7 +750,7 @@ Buffer.prototype.readInt8 = function(offset, noAssert) {
   offset = offset >>> 0;
   if (!noAssert)
     checkOffset(offset, 1, this.length);
-  var val = this[offset];
+  var val = this.getAt(offset);
   return !(val & 0x80) ? val : (0xff - val + 1) * -1;
 };
 
@@ -758,7 +759,7 @@ Buffer.prototype.readInt16LE = function(offset, noAssert) {
   offset = offset >>> 0;
   if (!noAssert)
     checkOffset(offset, 2, this.length);
-  var val = this[offset] | (this[offset + 1] << 8);
+  var val = this.getAt(offset) | (this.getAt(offset + 1) << 8);
   return (val & 0x8000) ? val | 0xFFFF0000 : val;
 };
 
@@ -767,7 +768,7 @@ Buffer.prototype.readInt16BE = function(offset, noAssert) {
   offset = offset >>> 0;
   if (!noAssert)
     checkOffset(offset, 2, this.length);
-  var val = this[offset + 1] | (this[offset] << 8);
+  var val = this.getAt(offset + 1) | (this.getAt(offset) << 8);
   return (val & 0x8000) ? val | 0xFFFF0000 : val;
 };
 
@@ -777,10 +778,10 @@ Buffer.prototype.readInt32LE = function(offset, noAssert) {
   if (!noAssert)
     checkOffset(offset, 4, this.length);
 
-  return (this[offset]) |
-      (this[offset + 1] << 8) |
-      (this[offset + 2] << 16) |
-      (this[offset + 3] << 24);
+  return (this.getAt(offset)) |
+      (this.getAt(offset + 1) << 8) |
+      (this.getAt(offset + 2) << 16) |
+      (this.getAt(offset + 3) << 24);
 };
 
 
@@ -789,10 +790,10 @@ Buffer.prototype.readInt32BE = function(offset, noAssert) {
   if (!noAssert)
     checkOffset(offset, 4, this.length);
 
-  return (this[offset] << 24) |
-      (this[offset + 1] << 16) |
-      (this[offset + 2] << 8) |
-      (this[offset + 3]);
+  return (this.getAt(offset) << 24) |
+      (this.getAt(offset + 1) << 16) |
+      (this.getAt(offset + 2) << 8) |
+      (this.getAt(offset + 3));
 };
 
 
@@ -849,9 +850,9 @@ Buffer.prototype.writeUIntLE = function(value, offset, byteLength, noAssert) {
 
   var mul = 1;
   var i = 0;
-  this[offset] = value;
+  this.setAt(offset, value);
   while (++i < byteLength && (mul *= 0x100))
-    this[offset + i] = (value / mul) >>> 0;
+    this.setAt(offset + i, (value / mul) >>> 0);
 
   return offset + byteLength;
 };
@@ -868,9 +869,9 @@ Buffer.prototype.writeUIntBE = function(value, offset, byteLength, noAssert) {
 
   var i = byteLength - 1;
   var mul = 1;
-  this[offset + i] = value;
+  this.setAt(offset + i, value);
   while (--i >= 0 && (mul *= 0x100))
-    this[offset + i] = (value / mul) >>> 0;
+    this.setAt(offset + i, (value / mul) >>> 0);
 
   return offset + byteLength;
 };
@@ -881,7 +882,7 @@ Buffer.prototype.writeUInt8 = function(value, offset, noAssert) {
   offset = offset >>> 0;
   if (!noAssert)
     checkInt(this, value, offset, 1, 0xff, 0);
-  this[offset] = value;
+  this.setAt(offset, value);
   return offset + 1;
 };
 
@@ -891,8 +892,8 @@ Buffer.prototype.writeUInt16LE = function(value, offset, noAssert) {
   offset = offset >>> 0;
   if (!noAssert)
     checkInt(this, value, offset, 2, 0xffff, 0);
-  this[offset] = value;
-  this[offset + 1] = (value >>> 8);
+  this.setAt(offset,     value);
+  this.setAt(offset + 1, value >>> 8);
   return offset + 2;
 };
 
@@ -902,8 +903,8 @@ Buffer.prototype.writeUInt16BE = function(value, offset, noAssert) {
   offset = offset >>> 0;
   if (!noAssert)
     checkInt(this, value, offset, 2, 0xffff, 0);
-  this[offset] = (value >>> 8);
-  this[offset + 1] = value;
+  this.setAt(offset,     value >>> 8);
+  this.setAt(offset + 1, value);
   return offset + 2;
 };
 
@@ -913,10 +914,10 @@ Buffer.prototype.writeUInt32LE = function(value, offset, noAssert) {
   offset = offset >>> 0;
   if (!noAssert)
     checkInt(this, value, offset, 4, 0xffffffff, 0);
-  this[offset + 3] = (value >>> 24);
-  this[offset + 2] = (value >>> 16);
-  this[offset + 1] = (value >>> 8);
-  this[offset] = value;
+  this.setAt(offset + 3, value >>> 24);
+  this.setAt(offset + 2, value >>> 16);
+  this.setAt(offset + 1, value >>> 8);
+  this.setAt(offset,     value);
   return offset + 4;
 };
 
@@ -926,10 +927,10 @@ Buffer.prototype.writeUInt32BE = function(value, offset, noAssert) {
   offset = offset >>> 0;
   if (!noAssert)
     checkInt(this, value, offset, 4, 0xffffffff, 0);
-  this[offset] = (value >>> 24);
-  this[offset + 1] = (value >>> 16);
-  this[offset + 2] = (value >>> 8);
-  this[offset + 3] = value;
+  this.setAt(offset,     value >>> 24);
+  this.setAt(offset + 1, value >>> 16);
+  this.setAt(offset + 2, value >>> 8);
+  this.setAt(offset + 3, value);
   return offset + 4;
 };
 
@@ -949,11 +950,11 @@ Buffer.prototype.writeIntLE = function(value, offset, byteLength, noAssert) {
   var i = 0;
   var mul = 1;
   var sub = 0;
-  this[offset] = value;
+  this.setAt(offset, value);
   while (++i < byteLength && (mul *= 0x100)) {
-    if (value < 0 && sub === 0 && this[offset + i - 1] !== 0)
+    if (value < 0 && sub === 0 && this.getAt(offset + i - 1) !== 0)
       sub = 1;
-    this[offset + i] = ((value / mul) >> 0) - sub;
+    this.setAt(offset + i, ((value / mul) >> 0) - sub);
   }
 
   return offset + byteLength;
@@ -975,11 +976,11 @@ Buffer.prototype.writeIntBE = function(value, offset, byteLength, noAssert) {
   var i = byteLength - 1;
   var mul = 1;
   var sub = 0;
-  this[offset + i] = value;
+  this.setAt(offset + i, value);
   while (--i >= 0 && (mul *= 0x100)) {
-    if (value < 0 && sub === 0 && this[offset + i + 1] !== 0)
+    if (value < 0 && sub === 0 && this.getAt(offset + i + 1) !== 0)
       sub = 1;
-    this[offset + i] = ((value / mul) >> 0) - sub;
+    this.setAt(offset + i, ((value / mul) >> 0) - sub);
   }
 
   return offset + byteLength;
@@ -991,7 +992,7 @@ Buffer.prototype.writeInt8 = function(value, offset, noAssert) {
   offset = offset >>> 0;
   if (!noAssert)
     checkInt(this, value, offset, 1, 0x7f, -0x80);
-  this[offset] = value;
+  this.setAt(offset, value);
   return offset + 1;
 };
 
@@ -1001,8 +1002,8 @@ Buffer.prototype.writeInt16LE = function(value, offset, noAssert) {
   offset = offset >>> 0;
   if (!noAssert)
     checkInt(this, value, offset, 2, 0x7fff, -0x8000);
-  this[offset] = value;
-  this[offset + 1] = (value >>> 8);
+  this.setAt(offset,     value);
+  this.setAt(offset + 1, value >>> 8);
   return offset + 2;
 };
 
@@ -1012,8 +1013,8 @@ Buffer.prototype.writeInt16BE = function(value, offset, noAssert) {
   offset = offset >>> 0;
   if (!noAssert)
     checkInt(this, value, offset, 2, 0x7fff, -0x8000);
-  this[offset] = (value >>> 8);
-  this[offset + 1] = value;
+  this.setAt(offset,     value >>> 8);
+  this.setAt(offset + 1, value);
   return offset + 2;
 };
 
@@ -1023,10 +1024,10 @@ Buffer.prototype.writeInt32LE = function(value, offset, noAssert) {
   offset = offset >>> 0;
   if (!noAssert)
     checkInt(this, value, offset, 4, 0x7fffffff, -0x80000000);
-  this[offset] = value;
-  this[offset + 1] = (value >>> 8);
-  this[offset + 2] = (value >>> 16);
-  this[offset + 3] = (value >>> 24);
+  this.setAt(offset,     value);
+  this.setAt(offset + 1, value >>> 8);
+  this.setAt(offset + 2, value >>> 16);
+  this.setAt(offset + 3, value >>> 24);
   return offset + 4;
 };
 
@@ -1036,10 +1037,10 @@ Buffer.prototype.writeInt32BE = function(value, offset, noAssert) {
   offset = offset >>> 0;
   if (!noAssert)
     checkInt(this, value, offset, 4, 0x7fffffff, -0x80000000);
-  this[offset] = (value >>> 24);
-  this[offset + 1] = (value >>> 16);
-  this[offset + 2] = (value >>> 8);
-  this[offset + 3] = value;
+  this.setAt(offset,     value >>> 24);
+  this.setAt(offset + 1, value >>> 16);
+  this.setAt(offset + 2, value >>> 8);
+  this.setAt(offset + 3, value);
   return offset + 4;
 };
 

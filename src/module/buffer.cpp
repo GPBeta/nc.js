@@ -264,6 +264,51 @@ static inline void SliceT(CefRefPtr<CefV8Value> object, const CefV8ValueList& ar
         retval = DoSliceT<E>(slice);
 }
 
+template <class T, Environment::Endianness E>
+static inline void ReadNumberT(const CefV8ValueList& args,
+                               CefRefPtr<CefV8Value>& retval, CefString& except)
+{
+    NCJS_CHK_GE(args.size(), 2);
+
+    Buffer* buf = Buffer::Get(args[0]);
+
+    if (buf == NULL)
+        return BUFFER_ERROR;
+
+    const unsigned offset = args[1]->GetUIntValue();
+
+    NCJS_CHK_LE(offset + sizeof(T), buf->Size());
+
+    T value = *To<T*>(buf->Data() + offset);
+    if (E != Environment::GetEndianness())
+        ReverseArray(To<char*>(&value), sizeof(T));
+
+    retval = CefV8Value::CreateDouble(value);
+}
+
+template <class T, Environment::Endianness E>
+static inline void WriteNumberT(const CefV8ValueList& args,
+                                CefRefPtr<CefV8Value>& retval, CefString& except)
+{
+    NCJS_CHK_GE(args.size(), 3);
+
+    Buffer* buf = Buffer::Get(args[0]);
+
+    if (buf == NULL)
+        return BUFFER_ERROR;
+
+    const unsigned offset = args[2]->GetUIntValue();
+
+    NCJS_CHK_LE(offset + sizeof(T), buf->Size());
+
+    char* value = buf->Data() + offset;
+    *To<T*>(value) = T(args[1]->GetDoubleValue());
+    if (E != Environment::GetEndianness())
+        ReverseArray(value, sizeof(T));
+
+    retval = CefV8Value::CreateUInt(sizeof(T));
+}
+
 /// ----------------------------------------------------------------------------
 /// accessors
 /// ----------------------------------------------------------------------------
@@ -470,12 +515,49 @@ class BindingObject : public JsObjecT<BindingObject> {
         WrapBuffer(slice.buf->SubBuffer(slice.pos, slice.len), retval);
     }
 
+    // setAt() no throw
+    NCJS_OBJECT_FUNCTION(SetAt)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        if (args.size() < 1)
+            return;
+
+        unsigned value = 0;
+
+        if (args.size() >= 2) {
+            retval = args[1];
+            value = retval->GetUIntValue();
+        }
+
+        if (Buffer* buf = Buffer::Get(object)) {
+            const unsigned offset = args[0]->GetUIntValue();
+            if (offset < buf->Size())
+                buf->Data()[offset] = char(value);
+        }
+    }
+
+    // getAt() no throw
+    NCJS_OBJECT_FUNCTION(GetAt)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        if (args.size() < 1)
+            return;
+
+        if (Buffer* buf = Buffer::Get(object)) {
+            const unsigned offset = args[0]->GetUIntValue();
+            if (offset < buf->Size())
+                retval = CefV8Value::CreateUInt(buf->Data()[offset]);
+        }
+    }
+
     // object builder
 
     NCJS_BEGIN_OBJECT_BUILDER()
         // functions
         NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("createBuffer"), CreateBuffer)
         NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("subarray"), SubArray)
+        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("setAt"), SetAt)
+        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("getAt"), GetAt)
         // accessors
         NCJS_MAP_OBJECT_ACCESSOR(consts::str_flags, FlagsAccessor)
     NCJS_END_OBJECT_BUILDER()
@@ -547,56 +629,56 @@ class ModuleBuffer : public JsObjecT<ModuleBuffer> {
     NCJS_OBJECT_FUNCTION(ReadDoubleBE)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
+        ReadNumberT<double, Environment::BIG_ENDIAN>(args, retval, except);
     }
 
     // buffer.readDoubleLE()
     NCJS_OBJECT_FUNCTION(ReadDoubleLE)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
+        ReadNumberT<double, Environment::LITTLE_ENDIAN>(args, retval, except);
     }
 
     // buffer.readFloatBE()
     NCJS_OBJECT_FUNCTION(ReadFloatBE)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
+        ReadNumberT<float, Environment::BIG_ENDIAN>(args, retval, except);
     }
 
     // buffer.readFloatLE()
     NCJS_OBJECT_FUNCTION(ReadFloatLE)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
+        ReadNumberT<float, Environment::LITTLE_ENDIAN>(args, retval, except);
     }
 
     // buffer.writeDoubleBE()
     NCJS_OBJECT_FUNCTION(WriteDoubleBE)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
+        WriteNumberT<double, Environment::BIG_ENDIAN>(args, retval, except);
     }
 
     // buffer.writeDoubleLE()
     NCJS_OBJECT_FUNCTION(WriteDoubleLE)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
+        WriteNumberT<double, Environment::LITTLE_ENDIAN>(args, retval, except);
     }
 
     // buffer.writeFloatBE()
     NCJS_OBJECT_FUNCTION(WriteFloatBE)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
+        WriteNumberT<float, Environment::BIG_ENDIAN>(args, retval, except);
     }
 
     // buffer.writeFloatLE()
     NCJS_OBJECT_FUNCTION(WriteFloatLE)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
+        WriteNumberT<float, Environment::LITTLE_ENDIAN>(args, retval, except);
     }
 
     // buffer.setupBufferJS()
