@@ -605,11 +605,18 @@ Buffer.prototype.write = function(string, offset, length, encoding) {
   }
 };
 
+function toArray(obj) {
+  var array = new Array(obj.length);
+  for (var i = 0; i < array.length; i++)
+    array[i] = obj.getAt(i);
+  return array;
+}
+
 
 Buffer.prototype.toJSON = function() {
   return {
     type: 'Buffer',
-    data: Array.prototype.slice.call(this, 0)
+    data: toArray(this) 
   };
 };
 
@@ -637,7 +644,7 @@ Buffer.prototype.readUIntLE = function(offset, byteLength, noAssert) {
   var mul = 1;
   var i = 0;
   while (++i < byteLength && (mul *= 0x100))
-    val += this.getAt(offset + 1) * mul;
+    val += this.getAt(offset + i) * mul;
 
   return val;
 };
@@ -850,9 +857,9 @@ Buffer.prototype.writeUIntLE = function(value, offset, byteLength, noAssert) {
 
   var mul = 1;
   var i = 0;
-  this.setAt(offset, value);
+  this.setAt(offset, value & 0xff);
   while (++i < byteLength && (mul *= 0x100))
-    this.setAt(offset + i, (value / mul) >>> 0);
+    this.setAt(offset + i, (value / mul) & 0xff);
 
   return offset + byteLength;
 };
@@ -869,9 +876,9 @@ Buffer.prototype.writeUIntBE = function(value, offset, byteLength, noAssert) {
 
   var i = byteLength - 1;
   var mul = 1;
-  this.setAt(offset + i, value);
+  this.setAt(offset + i, value & 0xff);
   while (--i >= 0 && (mul *= 0x100))
-    this.setAt(offset + i, (value / mul) >>> 0);
+    this.setAt(offset + i, (value / mul) & 0xff);
 
   return offset + byteLength;
 };
@@ -950,11 +957,11 @@ Buffer.prototype.writeIntLE = function(value, offset, byteLength, noAssert) {
   var i = 0;
   var mul = 1;
   var sub = 0;
-  this.setAt(offset, value);
+  this.setAt(offset, value & 0xff);
   while (++i < byteLength && (mul *= 0x100)) {
     if (value < 0 && sub === 0 && this.getAt(offset + i - 1) !== 0)
       sub = 1;
-    this.setAt(offset + i, ((value / mul) >> 0) - sub);
+    this.setAt(offset + i, (value / mul - sub) & 0xff);
   }
 
   return offset + byteLength;
@@ -976,11 +983,11 @@ Buffer.prototype.writeIntBE = function(value, offset, byteLength, noAssert) {
   var i = byteLength - 1;
   var mul = 1;
   var sub = 0;
-  this.setAt(offset + i, value);
+  this.setAt(offset + i, value & 0xff);
   while (--i >= 0 && (mul *= 0x100)) {
     if (value < 0 && sub === 0 && this.getAt(offset + i + 1) !== 0)
       sub = 1;
-    this.setAt(offset + i, ((value / mul) >> 0) - sub);
+    this.setAt(offset + i, (value / mul - sub) & 0xff);
   }
 
   return offset + byteLength;
