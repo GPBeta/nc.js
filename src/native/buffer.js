@@ -605,10 +605,11 @@ Buffer.prototype.write = function(string, offset, length, encoding) {
   }
 };
 
-function toArray(obj) {
-  var array = new Array(obj.length);
+
+Buffer.prototype.toArray = function() {
+  var array = new Array(this.length);
   for (var i = 0; i < array.length; i++)
-    array[i] = obj.getAt(i);
+    array[i] = this.getAt(i);
   return array;
 }
 
@@ -616,7 +617,7 @@ function toArray(obj) {
 Buffer.prototype.toJSON = function() {
   return {
     type: 'Buffer',
-    data: toArray(this) 
+    data: this.toArray()
   };
 };
 
