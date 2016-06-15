@@ -16,6 +16,13 @@
 
         process.domain = null;
         process._exiting = false;
+        // process.title
+        Object.defineProperty(process, 'title', {
+            get: function() { return document.title; } ,
+            set: function(title) { document.title = title; },
+            enumerable: true,
+            configurable: true
+        });
         process.__proto__ = Object.create(EventEmitter.prototype, {
             constructor: {
                 value: process.constructor
