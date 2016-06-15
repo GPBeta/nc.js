@@ -23,6 +23,7 @@ It's based on the stable CEF dll-wrapper API, therefore Node-CEF should be compa
 - [VM](https://nodejs.org/dist/latest-v4.x/docs/api/vm.html)
 - [Process](https://nodejs.org/dist/latest-v4.x/docs/api/process.html)
 - [Punycode](https://nodejs.org/dist/latest-v4.x/docs/api/punycode.html)
+- [Timers](https://nodejs.org/dist/latest-v4.x/docs/api/timers.html)
 - [Utilities](https://nodejs.org/dist/latest-v4.x/docs/api/util.html)
 
 ### Security

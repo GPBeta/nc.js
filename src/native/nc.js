@@ -22,7 +22,7 @@
         EventEmitter.call(process);
 
         startup.globalVariables();
-        // startup.globalTimeouts();
+        startup.globalTimeouts();
 
         startup.processVariables();
         // startup.processConfig();
@@ -46,7 +46,13 @@
         global.GLOBAL = global;
         global.root = global;
     };
-    
+
+    startup.globalTimeouts = function() {
+        const timers = NativeModule.require('timers');
+        global.setImmediate = timers.setImmediate;
+        global.clearImmediate = timers.clearImmediate;
+    };
+
     startup._lazyConstants = null;
 
     startup.lazyConstants = function() {
@@ -71,16 +77,12 @@
     startup.processNextTick = function() {
         process.nextTick = nextTick;
 
-        // just simply use setTimeout()
-        function nextTick(callback) {
+        // just simply use setImmediate()
+        function nextTick() {
             if (process._exiting)
                 return;
 
-            var args = [callback, 0];
-            for (var i = 1; i < arguments.length; i++)
-                args.push(arguments[i]);
-
-            setTimeout.apply(window, args);
+            setImmediate.apply(window, arguments);
         }
     };
 
