@@ -15,6 +15,14 @@
 #define BUFFER_ERROR Environment::ErrorException(NCJS_TEXT("Argument should be a Buffer"), except)
 #define  INDEX_ERROR Environment::RangeException(NCJS_TEXT("Out of range index"), except)
 
+#define INDEX_PARAM(_VAR, _ARGS, _N, _DEF, _MAX) \
+        size_t _VAR = _DEF; \
+        if (NCJS_ARG_IS(UInt, _ARGS, _N)) { \
+            _VAR = _ARGS[_N]->GetUIntValue(); \
+            if (_VAR > _MAX) \
+                return INDEX_ERROR; \
+        }
+
 /// ----------------------------------------------------------------------------
 /// headers
 /// ----------------------------------------------------------------------------
@@ -66,50 +74,6 @@ inline Buffer* Buffer::Create(size_t size)
 {
     return new Buffer(static_cast<char*>(malloc(size)), size);
 }
-
-class FormatSliceParam {
-public:
-
-    FormatSliceParam(const CefRefPtr<CefV8Value>& object,
-                     const CefV8ValueList& args, CefString& except) :
-        buf(NULL), pos(0), len(0)
-    {
-        if (!(buf = Buffer::Get(object))) {
-            BUFFER_ERROR;
-            return;
-        }
-
-        len = buf->Size();
-
-        if (len == 0)
-            return;
-
-        int end = int(len);
-        if (NCJS_ARG_IS(Int, args, 0)) { 
-            pos = args[0]->GetIntValue();
-            if (pos < 0) {
-                pos += int(len);
-                if (pos < 0)
-                    pos = 0;
-            } else if (size_t(pos) > len) {
-                pos = int(len);
-            }
-        }
-        if (NCJS_ARG_IS(Int, args, 1)) {
-            end = args[1]->GetIntValue();
-            if (end < 0)
-                end = -end;
-            if (size_t(end) > len)
-                end = int(len);
-        }
-
-        len = end > pos ? end - pos : 0;
-    }
-
-    Buffer* buf;
-    int     pos;
-    size_t  len;
-};
 
 template <class T>
 static void force_ascii_slow(const char* src, size_t len, T* dst) {
@@ -165,66 +129,60 @@ static void force_ascii(const char* src, size_t len, char* dst) {
 #endif // CEF_STRING_TYPE_UTF8
 
 template <Encoding E>
-static inline CefRefPtr<CefV8Value> DoSliceT(const FormatSliceParam& slice);
+static inline CefRefPtr<CefV8Value> DoSliceT(const char* buf, size_t len);
 
 template <>
-static inline CefRefPtr<CefV8Value> DoSliceT<ASCII>(const FormatSliceParam& slice)
+static inline CefRefPtr<CefV8Value> DoSliceT<ASCII>(const char* buf, size_t len)
 {
-    const char* buf = slice.buf->Data() + slice.pos;
+    std::vector<cef_char_t> dst(len);
+    force_ascii(buf, len, &dst[0]);
 
-    std::vector<cef_char_t> dst(slice.len);
-    force_ascii(buf, slice.len, &dst[0]);
-
-    return CefV8Value::CreateString(CefString(&dst[0], slice.len, false));
+    return CefV8Value::CreateString(CefString(&dst[0], len, false));
 }
 
 template <>
-static inline CefRefPtr<CefV8Value> DoSliceT<BINARY>(const FormatSliceParam& slice)
+static inline CefRefPtr<CefV8Value> DoSliceT<BINARY>(const char* buf, size_t len)
 {
-    const char* buf = slice.buf->Data() + slice.pos;
-    const size_t len = slice.len / sizeof(cef_char_t);
+    const size_t strLen = len / sizeof(cef_char_t);
 
-    const CefString str(To<const cef_char_t*>(buf), len, false);
+    const CefString str(To<const cef_char_t*>(buf), strLen, false);
 
     return CefV8Value::CreateString(str);
 }
 
 template <>
-static inline CefRefPtr<CefV8Value> DoSliceT<BASE64>(const FormatSliceParam& slice)
+static inline CefRefPtr<CefV8Value> DoSliceT<BASE64>(const char* buf, size_t len)
 {
-    const char* buf = slice.buf->Data() + slice.pos;
-    return CefV8Value::CreateString(CefBase64Encode(buf, slice.len));
+    return CefV8Value::CreateString(CefBase64Encode(buf, len));
 }
 
 template <>
-static inline CefRefPtr<CefV8Value> DoSliceT<HEX>(const FormatSliceParam& slice)
+static inline CefRefPtr<CefV8Value> DoSliceT<HEX>(const char* buf, size_t len)
 {
-    const char* BIT2HEX = "0123456789abcdef";
-    const char* buf = slice.buf->Data() + slice.pos;
-    const size_t len = slice.len * 2;
+    const char* BIN2HEX = "0123456789abcdef";
+    const size_t strLen = len * 2;
 
-    std::vector<cef_char_t> dst(len);
-    for (size_t i = 0, k = 0; i < slice.len; ++i) {
+    std::vector<cef_char_t> dst(strLen);
+    for (size_t i = 0, k = 0; i < len; ++i) {
         const unsigned val = buf[i];
-        dst[k] = BIT2HEX[val >> 4]; ++k;
-        dst[k] = BIT2HEX[val & 15]; ++k;
+        dst[k] = BIN2HEX[val >> 4]; ++k;
+        dst[k] = BIN2HEX[val & 15]; ++k;
     }
 
     return CefV8Value::CreateString(CefString(&dst[0], len, false));
 }
 
 template <>
-static inline CefRefPtr<CefV8Value> DoSliceT<UCS2>(const FormatSliceParam& slice)
+static inline CefRefPtr<CefV8Value> DoSliceT<UCS2>(const char* buf, size_t len)
 {    
-    const char* buf = slice.buf->Data() + slice.pos;
-    const size_t len = slice.len / 2;
+    const size_t strLen = len / 2;
     const bool aligned = To<size_t>(buf) % 2 == 0;
 
     if (Environment::IsLE() && aligned) { 
 #ifdef CEF_STRING_TYPE_UTF16
-        const CefString str(To<const cef_char_t*>(buf), len, false);
+        const CefString str(To<const cef_char_t*>(buf), strLen, false);
 #else
-        const base::string16 str(To<const base::char16*>(buf), len);
+        const base::string16 str(To<const base::char16*>(buf), strLen);
 #endif // CEF_STRING_TYPE_UTF16
         return CefV8Value::CreateString(str);
     }
@@ -232,21 +190,21 @@ static inline CefRefPtr<CefV8Value> DoSliceT<UCS2>(const FormatSliceParam& slice
     // BE -> LE
 
     base::string16 dst;
-    dst.reserve(len);
+    dst.reserve(strLen);
 
-    for (unsigned i = 0; i < slice.len; i += 2)
+    for (unsigned i = 0; i < len; i += 2)
       dst.push_back(buf[i] | (buf[i + 1] << 8));
 
     return CefV8Value::CreateString(dst);
 }
 
 template <>
-static inline CefRefPtr<CefV8Value> DoSliceT<UTF8>(const FormatSliceParam& slice)
+static inline CefRefPtr<CefV8Value> DoSliceT<UTF8>(const char* buf, size_t len)
 {
 #ifdef CEF_STRING_TYPE_UTF8
-    const CefString str(slice.buf->Data() + slice.pos, slice.len, false);
+    const CefString str(buf, len, false);
 #else
-    const std::string str(slice.buf->Data() + slice.pos, slice.len);
+    const std::string str(buf, len);
 #endif // CEF_STRING_TYPE_UTF8
     return CefV8Value::CreateString(str);
 }
@@ -255,13 +213,19 @@ template <Encoding E>
 static inline void SliceT(CefRefPtr<CefV8Value> object, const CefV8ValueList& args,
                           CefRefPtr<CefV8Value>& retval, CefString& except)
 {
-    const FormatSliceParam slice(object, args, except);
+    Buffer* buf = Buffer::Get(object);
 
-    if (!slice.buf)
-        return;
+    if (buf == NULL)
+        return BUFFER_ERROR;
 
-    if (slice.len)
-        retval = DoSliceT<E>(slice);
+    INDEX_PARAM(start, args, 0, 0, buf->Size());
+    INDEX_PARAM(end, args, 1, buf->Size(), buf->Size());
+
+    if (start > end)
+        return INDEX_ERROR;
+
+    if (const size_t len = end - start)
+        retval = DoSliceT<E>(buf->Data() + start, len);
 }
 
 template <class T, Environment::Endianness E>
@@ -428,28 +392,16 @@ class BufferPrototype : public JsObjecT<BufferPrototype> {
         Buffer* src = NULL;
         Buffer* dst = NULL;
 
-        if (!args.size() || !(src = Buffer::Get(object)) || !(dst = Buffer::Get(args[0])))
+        if (!args.size() ||
+            !(src = Buffer::Get(object)) || !(dst = Buffer::Get(args[0])))
             return BUFFER_ERROR;
 
-        size_t dstStart = 0;
-        size_t srcStart = 0;
-        size_t srcEnd = src->Size();
+        INDEX_PARAM(dstStart, args, 1, 0, dst->Size());
+        INDEX_PARAM(srcStart, args, 2, 0, src->Size());
+        INDEX_PARAM(srcEnd,   args, 3, src->Size(), src->Size());
 
-        if (NCJS_ARG_IS(UInt, args, 1)) {
-            dstStart = args[1]->GetUIntValue();
-            if (dstStart > dst->Size())
-                return INDEX_ERROR;
-        }
-        if (NCJS_ARG_IS(UInt, args, 2)) {
-            srcStart = args[2]->GetUIntValue();
-            if (srcStart > src->Size())
-                return INDEX_ERROR;
-        }
-        if (NCJS_ARG_IS(UInt, args, 3)) {
-            srcEnd = args[3]->GetUIntValue();
-            if (srcEnd > src->Size() || srcStart > srcEnd)
-                return INDEX_ERROR;
-        }
+        if (srcStart > srcEnd)
+            return INDEX_ERROR;
 
         const size_t toCopy = Min(Min(srcEnd - srcStart, dst->Size() - dstStart),
                                   src->Size() - srcStart);
@@ -507,12 +459,39 @@ class BindingObject : public JsObjecT<BindingObject> {
     NCJS_OBJECT_FUNCTION(SubArray)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        const FormatSliceParam slice(object, args, except);
+        Buffer* buf = Buffer::Get(object);
 
-        if (slice.buf == NULL)
-            return;
+        if (buf == NULL)
+            return BUFFER_ERROR;
 
-        WrapBuffer(slice.buf->SubBuffer(slice.pos, slice.len), retval);
+        size_t len = buf->Size();
+        int start = 0;
+        int end = int(len);
+
+        if (len) {
+            int end = int(len);
+            if (NCJS_ARG_IS(Int, args, 0)) { 
+                start = args[0]->GetIntValue();
+                if (start < 0) {
+                    start += int(len);
+                    if (start < 0)
+                        start = 0;
+                } else if (size_t(start) > len) {
+                    start = int(len);
+                }
+            }
+            if (NCJS_ARG_IS(Int, args, 1)) {
+                end = args[1]->GetIntValue();
+                if (end < 0)
+                    end = -end;
+                if (size_t(end) > len)
+                    end = int(len);
+            }
+
+            len = end > start ? end - start : 0;
+        }
+
+        WrapBuffer(buf->SubBuffer(start, len), retval);
     }
 
     // setAt() no throw
