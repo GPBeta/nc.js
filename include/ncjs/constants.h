@@ -69,7 +69,6 @@ _NCJS_CONST_DECLARE_CEFSTR(str_model, "model");
 _NCJS_CONST_DECLARE_CEFSTR(str_modules, "modules");
 _NCJS_CONST_DECLARE_CEFSTR(str_module_load_list, "moduleLoadList");
 _NCJS_CONST_DECLARE_CEFSTR(str_name, "name");
-_NCJS_CONST_DECLARE_CEFSTR(str_need_imm_cb, "_needImmediateCallback");
 _NCJS_CONST_DECLARE_CEFSTR(str_netmask, "netmask");
 _NCJS_CONST_DECLARE_CEFSTR(str_nice, "nice");
 _NCJS_CONST_DECLARE_CEFSTR(str_node, "node");

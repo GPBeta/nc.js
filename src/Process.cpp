@@ -91,18 +91,6 @@ class EnvAccessor : public JsAccessorT<EnvAccessor> {
     }
 };
 
-class NeedImmCbAccessor : public JsAccessorT<NeedImmCbAccessor> {
-    NCJS_ACCESSOR_GETTER(Get)(const CefRefPtr<CefV8Value> object,
-                                    CefRefPtr<CefV8Value>& retval, CefString& except)
-    {
-    }
-
-    NCJS_ACCESSOR_SETTER(Set)(const CefRefPtr<CefV8Value> object,
-                              const CefRefPtr<CefV8Value> value, CefString& except)
-    {
-    }
-};
-
 /// ----------------------------------------------------------------------------
 /// objects
 /// ----------------------------------------------------------------------------
@@ -405,13 +393,6 @@ class ProcessObject : public JsObjecT<ProcessObject> {
                          V8_PROPERTY_ATTRIBUTE_NONE);
     }
 
-    // process._setupNextTick()
-    NCJS_OBJECT_FUNCTION(SetupNextTick)(CefRefPtr<CefV8Value> object,
-        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
-    {
-        except = consts::str_err_notimpl;
-    }
-
     // process._setupPromises()
     NCJS_OBJECT_FUNCTION(SetupPromises)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
@@ -455,12 +436,10 @@ class ProcessObject : public JsObjecT<ProcessObject> {
         NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("dlopen"), DLOpen)
         NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("uptime"), Uptime)
         NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("memoryUsage"), MemoryUsage)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("_setupNextTick"), SetupNextTick)
         NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("_setupPromises"), SetupPromises)
         NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("_setupDomainUse"), SetupDomainUse)
         // accessors
         NCJS_MAP_OBJECT_ACCESSOR(consts::str_env, EnvAccessor)
-        NCJS_MAP_OBJECT_ACCESSOR(consts::str_need_imm_cb, NeedImmCbAccessor)
     NCJS_END_OBJECT_FACTORY()
 };
 

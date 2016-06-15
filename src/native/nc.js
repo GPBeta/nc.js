@@ -14,15 +14,6 @@
    
         var EventEmitter = NativeModule.require('events');
 
-        process.domain = null;
-        process._exiting = false;
-        // process.title
-        Object.defineProperty(process, 'title', {
-            get: function() { return document.title; } ,
-            set: function(title) { document.title = title; },
-            enumerable: true,
-            configurable: true
-        });
         process.__proto__ = Object.create(EventEmitter.prototype, {
             constructor: {
                 value: process.constructor
@@ -33,8 +24,9 @@
         startup.globalVariables();
         // startup.globalTimeouts();
 
+        startup.processVariables();
         // startup.processConfig();
-        // startup.processNextTick();
+        startup.processNextTick();
         startup.processKillAndExit();
         // startup.processSignalHandlers();
         
@@ -61,6 +53,35 @@
         if (!startup._lazyConstants)
             startup._lazyConstants = process.binding('constants');
         return startup._lazyConstants;
+    };
+
+    startup.processVariables = function() {
+        process.domain = null;
+        process._exiting = false;
+        process._needImmediateCallback = false;
+        // process.title
+        Object.defineProperty(process, 'title', {
+            get: function() { return document.title; } ,
+            set: function(title) { document.title = title; },
+            enumerable: true,
+            configurable: true
+        });
+    };
+
+    startup.processNextTick = function() {
+        process.nextTick = nextTick;
+
+        // just simply use setTimeout()
+        function nextTick(callback) {
+            if (process._exiting)
+                return;
+
+            var args = [callback, 0];
+            for (var i = 1; i < arguments.length; i++)
+                args.push(arguments[i]);
+
+            setTimeout.apply(window, args);
+        }
     };
 
     startup.processKillAndExit = function() {
