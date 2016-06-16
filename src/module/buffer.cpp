@@ -163,13 +163,13 @@ static inline CefRefPtr<CefV8Value> DoSliceT<HEX>(const char* buf, size_t len)
     const size_t strLen = len * 2;
 
     std::vector<cef_char_t> dst(strLen);
-    for (size_t i = 0, k = 0; i < len; ++i) {
-        const unsigned val = buf[i];
-        dst[k] = BIN2HEX[val >> 4]; ++k;
-        dst[k] = BIN2HEX[val & 15]; ++k;
+    for (size_t i = 0, k = 0; i < len;) {
+        const unsigned char val = buf[i++];
+        dst[k++] = BIN2HEX[val >> 4];
+        dst[k++] = BIN2HEX[val & 15];
     }
 
-    return CefV8Value::CreateString(CefString(&dst[0], len, false));
+    return CefV8Value::CreateString(CefString(&dst[0], strLen, false));
 }
 
 template <>
