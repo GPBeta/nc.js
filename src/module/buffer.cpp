@@ -12,7 +12,8 @@
 /// declarations
 /// ============================================================================
 
-#define BUFFER_ERROR Environment::ErrorException(NCJS_TEXT("Argument should be a Buffer"), except)
+#define BUFFER_ERROR Environment::ErrorException(NCJS_TEXT("Argument must be a Buffer"), except)
+#define STRING_ERROR Environment::TypeException(NCJS_TEXT("Argument must be a string"), except)
 #define  INDEX_ERROR Environment::RangeException(NCJS_TEXT("Out of range index"), except)
 
 #define INDEX_PARAM(_VAR, _ARGS, _N, _DEF, _MAX) \
@@ -128,8 +129,20 @@ static void force_ascii(const char* src, size_t len, char* dst) {
 #define force_ascii force_ascii_slow
 #endif // CEF_STRING_TYPE_UTF8
 
+unsigned HEX2BIN(cef_char_t c) {
+  if (c >= '0' && c <= '9')
+    return c - '0';
+  if (c >= 'A' && c <= 'F')
+    return 10 + (c - 'A');
+  if (c >= 'a' && c <= 'f')
+    return 10 + (c - 'a');
+  return -1;
+}
+
 template <Encoding E>
 static inline CefRefPtr<CefV8Value> DoSliceT(const char* buf, size_t len);
+template <Encoding E>
+static inline size_t DoWriteT(const CefString& str, size_t len, char* buf);
 
 template <>
 static inline CefRefPtr<CefV8Value> DoSliceT<ASCII>(const char* buf, size_t len)
@@ -138,6 +151,21 @@ static inline CefRefPtr<CefV8Value> DoSliceT<ASCII>(const char* buf, size_t len)
     force_ascii(buf, len, &dst[0]);
 
     return CefV8Value::CreateString(CefString(&dst[0], len, false));
+}
+
+template <>
+static inline size_t DoWriteT<ASCII>(const CefString& str, size_t len, char* buf)
+{
+    const size_t strLen = str.length();
+
+    if (strLen < len)
+        len = strLen;
+
+    const cef_char_t* src = str.c_str();
+    for (size_t i = 0; i < len; ++i)
+        buf[i] = char(src[i]);
+
+    return len;
 }
 
 template <>
@@ -151,9 +179,31 @@ static inline CefRefPtr<CefV8Value> DoSliceT<BINARY>(const char* buf, size_t len
 }
 
 template <>
+static inline size_t DoWriteT<BINARY>(const CefString& str, size_t len, char* buf)
+{
+    const size_t strLen = str.length() * sizeof(cef_char_t);
+
+    if (strLen < len)
+        len = strLen;
+
+    const cef_char_t* src = str.c_str();
+    for (size_t i = 0, n = len / sizeof(cef_char_t); i < n; ++i)
+        To<cef_char_t*>(buf)[i] = src[i];
+
+    return len;
+}
+
+template <>
 static inline CefRefPtr<CefV8Value> DoSliceT<BASE64>(const char* buf, size_t len)
 {
     return CefV8Value::CreateString(CefBase64Encode(buf, len));
+}
+
+template <>
+static inline size_t DoWriteT<BASE64>(const CefString& str, size_t len, char* buf)
+{
+    CefRefPtr<CefBinaryValue> raw = CefBase64Decode(str);
+    return raw ? raw->GetData(buf, len, 0) : 0;
 }
 
 template <>
@@ -170,6 +220,26 @@ static inline CefRefPtr<CefV8Value> DoSliceT<HEX>(const char* buf, size_t len)
     }
 
     return CefV8Value::CreateString(CefString(&dst[0], strLen, false));
+}
+
+template <>
+static inline size_t DoWriteT<HEX>(const CefString& str, size_t len, char* buf)
+{
+    const size_t strLen = str.length() / 2;
+
+    if (strLen < len)
+        len = strLen;
+
+    const cef_char_t* src = str.c_str();
+    for (size_t i = 0; i < len; ++i) {
+        const unsigned hi = HEX2BIN(*src++);
+        const unsigned lo = HEX2BIN(*src++);
+        if (!(~hi && ~hi))
+            return i;
+        buf[i] = (hi << 4) | lo;
+    }
+
+    return len;
 }
 
 template <>
@@ -199,6 +269,40 @@ static inline CefRefPtr<CefV8Value> DoSliceT<UCS2>(const char* buf, size_t len)
 }
 
 template <>
+static inline size_t DoWriteT<UCS2>(const CefString& str, size_t len, char* buf)
+{
+#ifdef CEF_STRING_TYPE_UTF16
+        const CefString& cvt = str;
+#else
+        const base::string16 cvt = str.ToString16();
+#endif // CEF_STRING_TYPE_UTF16
+
+    const size_t strLen = cvt.length() * 2;
+
+    if (strLen < len)
+        len = strLen;
+
+    if (Environment::IsLE()) {
+        memcpy(buf, cvt.c_str(), len);
+    } else { // BE -> LE
+        if (To<size_t>(buf) % 2) { // not aligned
+            const char* src = To<const char*>(cvt.c_str());
+            char* dst = buf;
+            for (size_t i = 0, n = len / 2; i < n; ++i, dst += 2) {
+                dst[1] = *src++;
+                dst[0] = *src++;
+            }
+        } else {
+            const base::char16* src = cvt.c_str();
+            for (size_t i = 0, n = len / 2; i < n; ++i)
+                To<base::char16*>(buf)[i] = (src[i] << 8) | (src[i] >> 8);
+        }
+    }
+
+    return len;
+}
+
+template <>
 static inline CefRefPtr<CefV8Value> DoSliceT<UTF8>(const char* buf, size_t len)
 {
 #ifdef CEF_STRING_TYPE_UTF8
@@ -207,6 +311,25 @@ static inline CefRefPtr<CefV8Value> DoSliceT<UTF8>(const char* buf, size_t len)
     const std::string str(buf, len);
 #endif // CEF_STRING_TYPE_UTF8
     return CefV8Value::CreateString(str);
+}
+
+template <>
+static inline size_t DoWriteT<UTF8>(const CefString& str, size_t len, char* buf)
+{
+#ifdef CEF_STRING_TYPE_UTF8
+    const CefString& cvt = str;
+#else
+    const std::string cvt = str.ToString();
+#endif // CEF_STRING_TYPE_UTF8
+
+    const size_t strLen = cvt.length();
+
+    if (strLen < len)
+        len = strLen;
+
+    memcpy(buf, cvt.c_str(), len);
+
+    return len;
 }
 
 template <Encoding E>
@@ -227,6 +350,39 @@ static inline void SliceT(CefRefPtr<CefV8Value> object, const CefV8ValueList& ar
     if (const size_t len = end - start)
         retval = DoSliceT<E>(buf->Data() + start, len);
 }
+
+template <Encoding E>
+static inline void WriteT(CefRefPtr<CefV8Value> object, const CefV8ValueList& args,
+                          CefRefPtr<CefV8Value>& retval, CefString& except)
+{
+    Buffer* buf = Buffer::Get(object);
+
+    if (buf == NULL)
+        return BUFFER_ERROR;
+
+    if (!NCJS_ARG_IS(String, args, 0))
+        return STRING_ERROR;
+
+    const CefString str = args[0]->GetStringValue();
+
+    if (E == HEX && str.length() % 2 != 0)
+        return Environment::TypeException(NCJS_TEXT("Invalid hex string"), except);
+
+    INDEX_PARAM(offset, args, 1, 0, buf->Size());
+
+    size_t len = buf->Size() - offset;
+    if (NCJS_ARG_IS(UInt, args, 2)) {
+        const unsigned value = args[2]->GetUIntValue();
+        if (value < len)
+            len = value;
+    }
+
+    if (len && str.length())
+        len = DoWriteT<E>(str, len, buf->Data() + offset);
+
+    retval = CefV8Value::CreateUInt(unsigned(len));
+}
+
 
 template <class T, Environment::Endianness E>
 static inline void ReadNumberT(const CefV8ValueList& args,
@@ -353,37 +509,37 @@ class BufferPrototype : public JsObjecT<BufferPrototype> {
     NCJS_OBJECT_FUNCTION(AsciiWrite)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
+        WriteT<ASCII>(object, args, retval, except);
     }
     // buffer.base64Write()
     NCJS_OBJECT_FUNCTION(Base64Write)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
+        WriteT<BASE64>(object, args, retval, except);
     }
     // buffer.binaryWrite()
     NCJS_OBJECT_FUNCTION(BinaryWrite)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
+        WriteT<BINARY>(object, args, retval, except);
     }
     // buffer.hexWrite()
     NCJS_OBJECT_FUNCTION(HexWrite)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
+        WriteT<HEX>(object, args, retval, except);
     }
     // buffer.ucs2Write()
     NCJS_OBJECT_FUNCTION(Ucs2Write)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
+        WriteT<UCS2>(object, args, retval, except);
     }
     // buffer.utf8Write()
     NCJS_OBJECT_FUNCTION(Utf8Write)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
+        WriteT<UTF8>(object, args, retval, except);
     }
     // buffer.copy()
     NCJS_OBJECT_FUNCTION(Copy)(CefRefPtr<CefV8Value> object,
