@@ -36,6 +36,7 @@
 #include <include/cef_parser.h>
 
 #include <signal.h>
+#include <algorithm>
 
 namespace ncjs {
 
@@ -54,26 +55,30 @@ static const int STRING_MAX_LENGTH = (1 << 28) - 16;
 /// implementation
 /// ============================================================================
 
-Buffer* Buffer::SubBuffer(size_t offset, size_t size) const
+static inline cef_char_t AsciiLower(cef_char_t c) {
+    return (c >= 'A' && c <= 'Z') ? c + 32 : c;
+} 
+
+static inline Encoding ParseEncoding(const CefString& str, Encoding def)
 {
-    NCJS_ASSERT(offset + size < m_size);
+    std_string enc(str.c_str(), str.length());
+    std::transform(enc.begin(), enc.end(), enc.begin(), AsciiLower);
 
-    return new Buffer(m_buffer + offset, size, this);
-}
+    if      (!enc.compare(NCJS_TEXT("utf8"))      ||
+             !enc.compare(NCJS_TEXT("utf-8")))    return UTF8;
+    else if (!enc.compare(NCJS_TEXT("ascii")))    return ASCII;
+    else if (!enc.compare(NCJS_TEXT("base64")))   return BASE64;
+    else if (!enc.compare(NCJS_TEXT("ucs2"))      ||
+             !enc.compare(NCJS_TEXT("ucs-2"))     ||
+             !enc.compare(NCJS_TEXT("utf16le"))   ||
+             !enc.compare(NCJS_TEXT("utf-16le"))) return UCS2;
+    else if (!enc.compare(NCJS_TEXT("binary"))    ||
+             !enc.compare(NCJS_TEXT("raw"))       ||
+             !enc.compare(NCJS_TEXT("raws")))     return BINARY;
+    else if (!enc.compare(NCJS_TEXT("buffer")))   return BUFFER;
+    else if (!enc.compare(NCJS_TEXT("hex")))      return HEX;
 
-inline Buffer* Buffer::Create(CefRefPtr<Environment> env, size_t size)
-{
-    Environment::BufferObjectInfo& info = env->GetBufferObjectInfo();
-
-    void* buffer = info.NoZeroFill() ? malloc(size) : calloc(size, 1);
-    info.ResetFillFlag();
-
-    return new Buffer(static_cast<char*>(buffer), size);
-}
-
-inline Buffer* Buffer::Create(size_t size)
-{
-    return new Buffer(static_cast<char*>(malloc(size)), size);
+    return def;
 }
 
 template <class T>
@@ -141,8 +146,9 @@ unsigned HEX2BIN(cef_char_t c) {
 
 template <Encoding E>
 static inline CefRefPtr<CefV8Value> DoSliceT(const char* buf, size_t len);
+// allocates memory if buf is NULL, caller's responsibility to free() it
 template <Encoding E>
-static inline size_t DoWriteT(const CefString& str, size_t len, char* buf);
+static inline size_t DoWriteT(const CefString& str, size_t len, char*& buf);
 
 template <>
 static inline CefRefPtr<CefV8Value> DoSliceT<ASCII>(const char* buf, size_t len)
@@ -154,12 +160,17 @@ static inline CefRefPtr<CefV8Value> DoSliceT<ASCII>(const char* buf, size_t len)
 }
 
 template <>
-static inline size_t DoWriteT<ASCII>(const CefString& str, size_t len, char* buf)
+static inline size_t DoWriteT<ASCII>(const CefString& str, size_t len, char*& buf)
 {
     const size_t strLen = str.length();
 
     if (strLen < len)
         len = strLen;
+
+    if (buf == NULL) { // auto allocation
+        if (!(buf = static_cast<char*>(malloc(len))))
+            return 0;
+    }
 
     const cef_char_t* src = str.c_str();
     for (size_t i = 0; i < len; ++i)
@@ -179,12 +190,17 @@ static inline CefRefPtr<CefV8Value> DoSliceT<BINARY>(const char* buf, size_t len
 }
 
 template <>
-static inline size_t DoWriteT<BINARY>(const CefString& str, size_t len, char* buf)
+static inline size_t DoWriteT<BINARY>(const CefString& str, size_t len, char*& buf)
 {
     const size_t strLen = str.length() * sizeof(cef_char_t);
 
     if (strLen < len)
         len = strLen;
+
+    if (buf == NULL) { // auto allocation
+        if (!(buf = static_cast<char*>(malloc(len))))
+            return 0;
+    }
 
     const cef_char_t* src = str.c_str();
     for (size_t i = 0, n = len / sizeof(cef_char_t); i < n; ++i)
@@ -200,10 +216,24 @@ static inline CefRefPtr<CefV8Value> DoSliceT<BASE64>(const char* buf, size_t len
 }
 
 template <>
-static inline size_t DoWriteT<BASE64>(const CefString& str, size_t len, char* buf)
+static inline size_t DoWriteT<BASE64>(const CefString& str, size_t len, char*& buf)
 {
     CefRefPtr<CefBinaryValue> raw = CefBase64Decode(str);
-    return raw ? raw->GetData(buf, len, 0) : 0;
+
+    if (!raw.get())
+        return 0;
+
+    const size_t rawLen = raw->GetSize();
+
+    if (rawLen < len)
+        len = rawLen;
+
+    if (buf == NULL) { // auto allocation
+        if (!(buf = static_cast<char*>(malloc(len))))
+            return 0;
+    }
+
+    return raw->GetData(buf, len, 0);
 }
 
 template <>
@@ -223,12 +253,17 @@ static inline CefRefPtr<CefV8Value> DoSliceT<HEX>(const char* buf, size_t len)
 }
 
 template <>
-static inline size_t DoWriteT<HEX>(const CefString& str, size_t len, char* buf)
+static inline size_t DoWriteT<HEX>(const CefString& str, size_t len, char*& buf)
 {
     const size_t strLen = str.length() / 2;
 
     if (strLen < len)
         len = strLen;
+
+    if (buf == NULL) { // auto allocation
+        if (!(buf = static_cast<char*>(malloc(len))))
+            return 0;
+    }
 
     const cef_char_t* src = str.c_str();
     for (size_t i = 0; i < len; ++i) {
@@ -269,7 +304,7 @@ static inline CefRefPtr<CefV8Value> DoSliceT<UCS2>(const char* buf, size_t len)
 }
 
 template <>
-static inline size_t DoWriteT<UCS2>(const CefString& str, size_t len, char* buf)
+static inline size_t DoWriteT<UCS2>(const CefString& str, size_t len, char*& buf)
 {
 #ifdef CEF_STRING_TYPE_UTF16
         const CefString& cvt = str;
@@ -281,6 +316,11 @@ static inline size_t DoWriteT<UCS2>(const CefString& str, size_t len, char* buf)
 
     if (strLen < len)
         len = strLen;
+
+    if (buf == NULL) { // auto allocation
+        if (!(buf = static_cast<char*>(malloc(len))))
+            return 0;
+    }
 
     if (Environment::IsLE()) {
         memcpy(buf, cvt.c_str(), len);
@@ -314,7 +354,7 @@ static inline CefRefPtr<CefV8Value> DoSliceT<UTF8>(const char* buf, size_t len)
 }
 
 template <>
-static inline size_t DoWriteT<UTF8>(const CefString& str, size_t len, char* buf)
+static inline size_t DoWriteT<UTF8>(const CefString& str, size_t len, char*& buf)
 {
 #ifdef CEF_STRING_TYPE_UTF8
     const CefString& cvt = str;
@@ -326,6 +366,11 @@ static inline size_t DoWriteT<UTF8>(const CefString& str, size_t len, char* buf)
 
     if (strLen < len)
         len = strLen;
+
+    if (buf == NULL) { // auto allocation
+        if (!(buf = static_cast<char*>(malloc(len))))
+            return 0;
+    }
 
     memcpy(buf, cvt.c_str(), len);
 
@@ -377,8 +422,10 @@ static inline void WriteT(CefRefPtr<CefV8Value> object, const CefV8ValueList& ar
             len = value;
     }
 
-    if (len && str.length())
-        len = DoWriteT<E>(str, len, buf->Data() + offset);
+    if (len && str.length()) {
+        char* buffer = buf->Data() + offset;
+        len = DoWriteT<E>(str, len, buffer);
+    }
 
     retval = CefV8Value::CreateUInt(unsigned(len));
 }
@@ -427,6 +474,60 @@ static inline void WriteNumberT(const CefV8ValueList& args,
         ReverseArray(value, sizeof(T));
 
     retval = CefV8Value::CreateUInt(sizeof(T));
+}
+
+inline Buffer* Buffer::SubBuffer(size_t offset, size_t size) const
+{
+    NCJS_ASSERT(offset + size < m_size);
+
+    return new Buffer(m_buffer + offset, size, this);
+}
+
+inline void Buffer::Wrap(Buffer* buffer, CefRefPtr<CefV8Value>& value)
+{
+    if (buffer) {
+        value = CefV8Value::CreateObject(NULL);
+        value->SetValue(consts::str_length,
+                        CefV8Value::CreateUInt(unsigned(buffer->Size())),
+                        V8_PROPERTY_ATTRIBUTE_READONLY);
+        value->SetUserData(buffer);
+    }
+}
+
+inline Buffer* Buffer::Create(CefRefPtr<Environment> env, size_t size)
+{
+    Environment::BufferObjectInfo& info = env->GetBufferObjectInfo();
+
+    void* buffer = info.NoZeroFill() ? malloc(size) : calloc(size, 1);
+    info.ResetFillFlag();
+
+    return buffer ? new Buffer(static_cast<char*>(buffer), size) : NULL;
+}
+
+inline Buffer* Buffer::Create(size_t size)
+{
+    void* buffer = static_cast<char*>(malloc(size));
+    return buffer ? new Buffer(static_cast<char*>(buffer), size) : NULL;
+}
+
+inline Buffer* Buffer::Create(const CefString& str, const CefString& encoding)
+{
+    const Encoding enc = ParseEncoding(encoding, UTF8);
+
+    char* buffer = NULL;
+    size_t size = 0;
+
+    switch (enc) {
+        case ASCII:  size = DoWriteT<ASCII> (str, -1, buffer); break;
+        case UTF8:   size = DoWriteT<UTF8>  (str, -1, buffer); break;
+        case BASE64: size = DoWriteT<BASE64>(str, -1, buffer); break;
+        case UCS2:   size = DoWriteT<UCS2>  (str, -1, buffer); break;
+        case BINARY: size = DoWriteT<BINARY>(str, -1, buffer); break;
+        case HEX:    size = DoWriteT<HEX>   (str, -1, buffer); break;
+        default: break;
+    }
+
+    return buffer ? new Buffer(buffer, size) : NULL;
 }
 
 /// ----------------------------------------------------------------------------
@@ -591,15 +692,6 @@ class BufferPrototype : public JsObjecT<BufferPrototype> {
 
 class BindingObject : public JsObjecT<BindingObject> {
 
-    static inline void WrapBuffer(Buffer* buffer, CefRefPtr<CefV8Value>& retval)
-    {
-        retval = CefV8Value::CreateObject(NULL);
-        retval->SetValue(consts::str_length,
-                         CefV8Value::CreateUInt(unsigned(buffer->Size())),
-                         V8_PROPERTY_ATTRIBUTE_READONLY);
-        retval->SetUserData(buffer);
-    }
-
     // createBuffer()
     NCJS_OBJECT_FUNCTION(CreateBuffer)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
@@ -608,7 +700,7 @@ class BindingObject : public JsObjecT<BindingObject> {
 
         NCJS_CHECK(args.size() == 1);
 
-        WrapBuffer(Buffer::Create(env, args[0]->GetUIntValue()), retval);
+        Buffer::Wrap(Buffer::Create(env, args[0]->GetUIntValue()), retval);
     }
 
     // subArray()
@@ -647,7 +739,7 @@ class BindingObject : public JsObjecT<BindingObject> {
             len = end > start ? end - start : 0;
         }
 
-        WrapBuffer(buf->SubBuffer(start, len), retval);
+        Buffer::Wrap(buf->SubBuffer(start, len), retval);
     }
 
     // setAt() no throw
@@ -708,14 +800,14 @@ class ModuleBuffer : public JsObjecT<ModuleBuffer> {
     NCJS_OBJECT_FUNCTION(CreateFromString)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
-    }
+        NCJS_CHECK(args.size() >= 2);
+        NCJS_CHECK(args[0]->IsString());
+        NCJS_CHECK(args[1]->IsString());
 
-    // buffer.createFromArrayBuffer()
-    NCJS_OBJECT_FUNCTION(CreateFromArrayBuffer)(CefRefPtr<CefV8Value> object,
-        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
-    {
-        except = consts::str_err_notimpl;
+        const CefString str = args[0]->GetStringValue();
+        const CefString enc = args[1]->GetStringValue();
+
+        Buffer::Wrap(Buffer::Create(str, enc), retval);
     }
 
     // buffer.byteLengthUtf8()
@@ -915,7 +1007,6 @@ class ModuleBuffer : public JsObjecT<ModuleBuffer> {
         NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("setupBufferJS"), SetupBufferJS)
 
         NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("createFromString"),      CreateFromString)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("createFromArrayBuffer"), CreateFromArrayBuffer)
 
         NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("byteLengthUtf8"), ByteLengthUtf8)
         NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("compare"),        Compare)

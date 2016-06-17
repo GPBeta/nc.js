@@ -150,7 +150,8 @@ function fromObject(obj) {
   }
 
   if (obj instanceof ArrayBuffer) {
-    return binding.createFromArrayBuffer(obj);
+    // NCJS: CEF does not support ArrayBuffer, convert obj to Uint8Array
+    obj = new Uint8Array(obj);
   }
 
   if (obj.buffer instanceof ArrayBuffer || obj.length) {

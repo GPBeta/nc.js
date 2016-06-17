@@ -47,7 +47,10 @@ public:
         return NULL;
     }
 
-    static bool IsWithinBounds(size_t off, size_t len, size_t max) {
+    static void Wrap(Buffer* buffer, CefRefPtr<CefV8Value>& value);
+
+    static bool IsWithinBounds(size_t off, size_t len, size_t max)
+    {
         // Asking to seek too far into the buffer
         // check to avoid wrapping in subsequent subtraction
         if (off > max)
@@ -63,6 +66,7 @@ public:
 
     static Buffer* Create(CefRefPtr<Environment> env, size_t size);
     static Buffer* Create(size_t size); // despise buffer object flags
+    static Buffer* Create(const CefString& str, const CefString& encoding);
 
 private:
 
