@@ -33,6 +33,7 @@
 #include "ncjs/module.h"
 #include "ncjs/constants.h"
 
+#include <string_search.h>
 #include <include/cef_parser.h>
 
 #include <signal.h>
@@ -483,6 +484,38 @@ inline Buffer* Buffer::SubBuffer(size_t offset, size_t size) const
     return new Buffer(m_buffer + offset, size, this);
 }
 
+inline int Buffer::SubSearch(Buffer* sub, size_t offset, bool ucs2) const
+{
+    NCJS_ASSERT(sub);
+
+    const char* subBuf = sub->Data();
+    const size_t subLen = sub->Size();
+
+    if (subLen == 0 || m_size == 0 ||
+        m_size < offset || subLen + offset > m_size)
+        return -1;
+
+    size_t result = m_size;
+
+    if (ucs2) {
+        if (m_size - offset < 2 || subLen < 2)
+            return -1;
+
+        result = node::SearchString(
+                To<const uint16_t*>(m_buffer), m_size / 2,
+                To<const uint16_t*>(subBuf), subLen / 2, offset / 2) * 2;
+        // fix result for not aligned buffer
+        if (result + 1 == m_size)
+            result = m_size;
+    } else {
+        result = node::SearchString(
+                To<const uint8_t*>(m_buffer), m_size,
+                To<const uint8_t*>(subBuf), subLen, offset);
+    }
+
+    return (result == m_size) ? -1 : int(result);
+}
+
 inline void Buffer::Wrap(Buffer* buffer, CefRefPtr<CefV8Value>& value)
 {
     if (buffer) {
@@ -510,14 +543,12 @@ inline Buffer* Buffer::Create(size_t size)
     return buffer ? new Buffer(static_cast<char*>(buffer), size) : NULL;
 }
 
-inline Buffer* Buffer::Create(const CefString& str, const CefString& encoding)
+inline Buffer* Buffer::Create(const CefString& str, int encoding)
 {
-    const Encoding enc = ParseEncoding(encoding, UTF8);
-
     char* buffer = NULL;
     size_t size = 0;
 
-    switch (enc) {
+    switch (encoding) {
         case ASCII:  size = DoWriteT<ASCII> (str, -1, buffer); break;
         case UTF8:   size = DoWriteT<UTF8>  (str, -1, buffer); break;
         case BASE64: size = DoWriteT<BASE64>(str, -1, buffer); break;
@@ -791,7 +822,7 @@ class ModuleBuffer : public JsObjecT<ModuleBuffer> {
         const CefString str = args[0]->GetStringValue();
         const CefString enc = args[1]->GetStringValue();
 
-        Buffer::Wrap(Buffer::Create(str, enc), retval);
+        Buffer::Wrap(Buffer::Create(str, ParseEncoding(enc, UTF8)), retval);
     }
 
     // buffer.byteLengthUtf8()
@@ -891,21 +922,78 @@ class ModuleBuffer : public JsObjecT<ModuleBuffer> {
     NCJS_OBJECT_FUNCTION(IndexOfBuffer)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
+        NCJS_ASSERT(args.size() >= 3);
+        NCJS_ASSERT(args[2]->IsIntValue());
+
+        Encoding enc = UTF8;
+        if (args.size() > 3)
+            enc = ParseEncoding(args[3]->GetStringValue(), UTF8);
+
+        Buffer* obj = Buffer::Get(args[0]);
+        Buffer* buf = Buffer::Get(args[1]);
+
+        if (obj == NULL || buf == NULL)
+            return BUFFER_ERROR;
+
+        const size_t offset = obj->IndexOffset(args[2]->GetIntValue());
+
+        retval = CefV8Value::CreateInt(obj->SubSearch(buf, offset, enc == UCS2));
     }
 
     // buffer.indexOfNumber()
     NCJS_OBJECT_FUNCTION(IndexOfNumber)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
+        NCJS_ASSERT(args.size() >= 3);
+        NCJS_ASSERT(args[1]->IsUIntValue());
+        NCJS_ASSERT(args[2]->IsIntValue());
+
+        Buffer* buf = Buffer::Get(args[0]);
+
+        if (buf == NULL)
+            return BUFFER_ERROR;
+
+        const unsigned number = args[1]->GetUIntValue();
+        const size_t start = buf->IndexOffset(args[2]->GetIntValue());
+        const size_t len = buf->Size();
+
+        size_t res = -1;
+
+        if (len && start < len) {
+            if (void* ptr = memchr(buf->Data() + start, number, len - start))
+                res = static_cast<char*>(ptr) - buf->Data();
+        }
+
+        retval = CefV8Value::CreateUInt(int(res));
     }
 
     // buffer.indexOfString()
     NCJS_OBJECT_FUNCTION(IndexOfString)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
+        NCJS_ASSERT(args.size() >= 3);
+        NCJS_ASSERT(args[1]->IsStringValue());
+        NCJS_ASSERT(args[2]->IsIntValue());
+
+        Encoding enc = UTF8;
+        if (args.size() > 3)
+            enc = ParseEncoding(args[3]->GetStringValue(), UTF8);
+
+        Buffer* obj = Buffer::Get(args[0]);
+
+        if (obj == NULL)
+            return BUFFER_ERROR;
+
+        CefRefPtr<Buffer> buf = Buffer::Create(args[1]->GetStringValue(), enc);
+
+        int res = -1;
+
+        if (buf.get()) {
+            const size_t offset = obj->IndexOffset(args[2]->GetIntValue());
+            res = obj->SubSearch(buf, offset, enc == UCS2);
+        }
+
+        retval = CefV8Value::CreateInt(res);
     }
 
     // buffer.readDoubleBE()

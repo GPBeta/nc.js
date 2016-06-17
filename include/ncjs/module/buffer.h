@@ -43,6 +43,7 @@ public:
     }
 
     Buffer* SubBuffer(size_t offset, size_t size) const;
+    int SubSearch(Buffer* sub, size_t offset, bool ucs2) const;
 
     /// Static Functions
     /// --------------------------------------------------------------
@@ -76,7 +77,7 @@ public:
 
     static Buffer* Create(CefRefPtr<Environment> env, size_t size);
     static Buffer* Create(size_t size); // despise buffer object flags
-    static Buffer* Create(const CefString& str, const CefString& encoding);
+    static Buffer* Create(const CefString& str, int encoding);
 
 private:
 
