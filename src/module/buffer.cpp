@@ -713,29 +713,13 @@ class BindingObject : public JsObjecT<BindingObject> {
             return BUFFER_ERROR;
 
         size_t len = buf->Size();
-        int start = 0;
-        int end = int(len);
+        size_t start = 0;
 
-        if (len) {
-            int end = int(len);
-            if (NCJS_ARG_IS(Int, args, 0)) { 
-                start = args[0]->GetIntValue();
-                if (start < 0) {
-                    start += int(len);
-                    if (start < 0)
-                        start = 0;
-                } else if (size_t(start) > len) {
-                    start = int(len);
-                }
-            }
-            if (NCJS_ARG_IS(Int, args, 1)) {
-                end = args[1]->GetIntValue();
-                if (end < 0)
-                    end = -end;
-                if (size_t(end) > len)
-                    end = int(len);
-            }
-
+        if (size_t end = len) {
+            if (NCJS_ARG_IS(Int, args, 0))
+                start = buf->IndexOffset(args[0]->GetIntValue());
+            if (NCJS_ARG_IS(Int, args, 1))
+                end = buf->IndexOffset(args[1]->GetIntValue());
             len = end > start ? end - start : 0;
         }
 

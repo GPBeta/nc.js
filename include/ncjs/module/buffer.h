@@ -32,6 +32,16 @@ public:
     char* Data() const { return m_buffer; }
     size_t Size() const { return m_size; }
 
+    size_t IndexOffset(int offset)
+    {
+        if (offset < 0) {
+            const size_t temp = -offset;
+            return (temp < m_size) ? m_size - temp : 0;
+        } // else start >= 0
+        const size_t index = offset;
+        return (index < m_size) ? index : m_size;
+    }
+
     Buffer* SubBuffer(size_t offset, size_t size) const;
 
     /// Static Functions
