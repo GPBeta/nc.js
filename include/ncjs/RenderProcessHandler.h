@@ -31,7 +31,7 @@ public:
     /// Callback Functions
     /// --------------------------------------------------------------
 
-    virtual void OnNodeCreated(CefCommandLine& args) {}
+    virtual void OnNodeCefCreated(CefCommandLine& args) {}
 
     /// Overriden Functions
     /// --------------------------------------------------------------

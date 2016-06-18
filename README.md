@@ -128,11 +128,11 @@ NCJS_DEFINE_BUILTIN_MODULE(my_module, MyModule);
 
 } // ncjs
 ```
-In `RenderProcessHandler::OnNodeCreated()` callback:
+In `RenderProcessHandler::OnNodeCefCreated()` callback:
 ```cpp
 NCJS_DECLARE_BUILTIN_MODULE(MyModule);
 
-void MyNodeCefApp::OnNodeCreated(CefCommandLine& args)
+void MyNodeCefApp::OnNodeCefCreated(CefCommandLine& args)
 {
     ModuleManager::Register(NCJS_BUILTIN_MODULE(MyModule));
 }

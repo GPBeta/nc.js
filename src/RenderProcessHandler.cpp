@@ -38,7 +38,7 @@ void RenderProcessHandler::OnRenderThreadCreated(CefRefPtr<CefListValue> extra_i
     // retrieve application path
     args->SetProgram(CefCommandLine::GetGlobalCommandLine()->GetProgram());
 
-    OnNodeCreated(*args.get());
+    OnNodeCefCreated(*args.get());
 
     m_core.Initialize(args);
 }
