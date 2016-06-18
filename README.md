@@ -18,6 +18,7 @@ It's based on the stable CEF dll-wrapper API, therefore Node-CEF should be compa
 ### Currently available modules:
 
 - [Buffer](https://nodejs.org/dist/latest-v4.x/docs/api/buffer.html)
+- [Events](https://nodejs.org/dist/latest-v4.x/docs/api/events.html)
 - [Globals](https://nodejs.org/dist/latest-v4.x/docs/api/globals.html)
 - [Modules](https://nodejs.org/dist/latest-v4.x/docs/api/modules.html)
 - [OS](https://nodejs.org/dist/latest-v4.x/docs/api/os.html)
@@ -39,7 +40,6 @@ Any remote accesses to the `ncjs` module are forbidden, currently only `file://`
 ### What's next:
 
 - [Child Process](https://nodejs.org/dist/latest-v4.x/docs/api/child_process.html)
-- [Events](https://nodejs.org/dist/latest-v4.x/docs/api/events.html)
 - [File System](https://nodejs.org/dist/latest-v4.x/docs/api/fs.html)
 - [Stream](https://nodejs.org/dist/latest-v4.x/docs/api/stream.html)
 - Supports for remote modules (Sync/Async).
@@ -182,6 +182,9 @@ When `index.html` loads code.js, the module located at `./node_modules/my_module
 
 #### Buffer
 Because of the missing `ArrayBuffer` and `Uint8Array` supports from CEF, the subscripting operator `buf[]` is not supported, use `buf.get()` and `buf.set()` to access buffer data.
+
+#### Process
+- Event: `beforeExit`, `rejectionHandled` and `unhandledRejection` are not emitted.
 
 
 ## Compatibilities

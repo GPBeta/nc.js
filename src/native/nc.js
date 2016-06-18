@@ -130,6 +130,11 @@
 
             return true;
         };
+
+        window.addEventListener('unload', function(event) {
+            process._exiting = true;
+            process.emit('exit', process.exitCode || 0);
+        });
     };
 
     startup.runMain = function(ncjs) {
