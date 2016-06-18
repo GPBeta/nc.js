@@ -18,6 +18,8 @@
 
 #include "ncjs/RenderProcessHandler.h"
 #include "ncjs/Core.h"
+#include "ncjs/Environment.h"
+#include "ncjs/constants.h"
 
 #include <include/cef_command_line.h>
 
@@ -46,6 +48,26 @@ void RenderProcessHandler::OnRenderThreadCreated(CefRefPtr<CefListValue> extra_i
 void RenderProcessHandler::OnWebKitInitialized()
 {
     Core::RegisterExtension();
+}
+
+void RenderProcessHandler::OnUncaughtException(CefRefPtr<CefBrowser> browser,
+    CefRefPtr<CefFrame> frame,
+    CefRefPtr<CefV8Context> context,
+    CefRefPtr<CefV8Exception> exception,
+    CefRefPtr<CefV8StackTrace> stackTrace)
+{
+    // works only if CefSettings::uncaught_exception_stack_size > 0
+
+    CefRefPtr<Environment> env = Environment::Get(context);
+    CefRefPtr<CefV8Value> process = env->GetObject().process;
+    CefRefPtr<CefV8Value> emit = process->GetValue(consts::str_emit);
+
+    if (emit.get()) {
+        CefV8ValueList args;
+        args.push_back(CefV8Value::CreateString(consts::str_uncaught_except));
+        args.push_back(CefV8Value::CreateString(exception->GetMessage()));
+        emit->ExecuteFunction(process, args);
+    }
 }
 
 } // ncjs

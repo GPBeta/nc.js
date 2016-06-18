@@ -44,6 +44,19 @@ public:
 
     virtual void OnWebKitInitialized() OVERRIDE;
 
+    virtual void OnContextCreated(CefRefPtr<CefBrowser> browser,
+                                  CefRefPtr<CefFrame> frame,
+                                  CefRefPtr<CefV8Context> context) OVERRIDE {}
+
+    virtual void OnContextReleased(CefRefPtr<CefBrowser> browser,
+                                   CefRefPtr<CefFrame> frame,
+                                   CefRefPtr<CefV8Context> context) OVERRIDE {}
+
+    virtual void OnUncaughtException(CefRefPtr<CefBrowser> browser,
+                                     CefRefPtr<CefFrame> frame,
+                                     CefRefPtr<CefV8Context> context,
+                                     CefRefPtr<CefV8Exception> exception,
+                                     CefRefPtr<CefV8StackTrace> stackTrace) OVERRIDE;
 private:
 
     Core m_core;

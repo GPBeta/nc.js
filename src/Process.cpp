@@ -151,7 +151,7 @@ class ProcessObject : public JsObjecT<ProcessObject> {
     {
         CefRefPtr<CefV8Context> context = CefV8Context::GetCurrentContext();
         CefRefPtr<Environment> env = Environment::Get(context);
-        CefRefPtr<CefV8Value> cache = env->GetObject().binding;
+        CefRefPtr<CefV8Value> cache = env->GetObject().binding_cache;
 
         const CefString module = args[0]->GetStringValue();
         if (cache->HasValue(module)) {
@@ -188,7 +188,7 @@ class ProcessObject : public JsObjecT<ProcessObject> {
     {
         CefRefPtr<CefV8Context> context = CefV8Context::GetCurrentContext();
         CefRefPtr<Environment> env = Environment::Get(context);
-        CefRefPtr<CefV8Value> cache = env->GetObject().binding;
+        CefRefPtr<CefV8Value> cache = env->GetObject().binding_cache;
 
         const CefString module = args[0]->GetStringValue();
         if (cache->HasValue(module)) {

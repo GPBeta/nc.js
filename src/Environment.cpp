@@ -56,6 +56,8 @@ void Environment::Setup(const CefString& execPath, const CefString& pagePath,
     m_pathPage = pagePath;
     m_urlFrame = frameUrl;
 
+    m_object.process = process;
+
     // argv[0] represents application path
     // argv[1] represents page path
     CefRefPtr<CefV8Value> vExecPath = CefV8Value::CreateString(execPath);
@@ -82,10 +84,10 @@ void Environment::Setup(const CefString& execPath, const CefString& pagePath,
     
 
     // variables not defined in Node.js
-
+    
     // process.binding._cache
     CefRefPtr<CefV8Value> binding = process->GetValue(consts::str_binding);
-    binding->SetValue(consts::str_cache, GetObject().binding, V8_PROPERTY_ATTRIBUTE_NONE);
+    binding->SetValue(consts::str_cache, m_object.binding_cache, V8_PROPERTY_ATTRIBUTE_NONE);
 }
 
 /// ----------------------------------------------------------------------------

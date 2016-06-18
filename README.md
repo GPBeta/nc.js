@@ -185,6 +185,7 @@ Because of the missing `ArrayBuffer` and `Uint8Array` supports from CEF, the sub
 
 #### Process
 - Event: `beforeExit`, `rejectionHandled` and `unhandledRejection` are not emitted.
+- Event: `uncaughtException` is emitted if `CefSettings::uncaught_exception_stack_size` > 0.
 
 
 ## Compatibilities

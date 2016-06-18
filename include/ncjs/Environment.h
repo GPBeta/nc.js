@@ -46,10 +46,11 @@ class Environment : public UserData {
     } m_function;
 
     struct Object {
-        CefRefPtr<CefV8Value> binding;
+        CefRefPtr<CefV8Value> process;
+        CefRefPtr<CefV8Value> binding_cache;
         CefRefPtr<CefV8Value> ptype_buffer;
 
-        Object() : binding(CefV8Value::CreateObject(NULL)) {}
+        Object() : binding_cache(CefV8Value::CreateObject(NULL)) {}
     } m_object;
 
 public:
