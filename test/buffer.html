@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Node-CEF</title>
+    <meta charset="utf-8"/>
+    <script type="text/javascript">
+    var require = ncjs.require;
+    var util = require('util');
+    var buffer = require('buffer');
+    var Buffer = buffer.Buffer;
+
+    function inspect(obj) {
+        return util.inspect(obj).replace(/\<|\>/g, function(str) {
+            switch (str) {
+                case '<': return '&lt;';
+                case '>': return '&gt;';
+                default: break;
+            }
+        });
+    }
+
+    window.onload = function() {
+        var html = '<h4>Constans</h4>\n';
+        html += 'buffer.INSPECT_MAX_BYTES: ' + buffer.INSPECT_MAX_BYTES + '\n';
+        html += '<h4>Buffer Object</h4>\n';
+        html += '<li>new Buffer()</li>\n'
+        html += "<b>Buffer</b>('VGVzdA==', 'base64'): " + inspect(Buffer('VGVzdA==', 'base64')) + '<br />';
+        html += "<b>Buffer</b>('54657374', 'hex'): " + inspect(Buffer('54657374', 'hex')) + '<br />';
+        html += "<b>Buffer</b>('Test', 'ascii'): " + inspect(Buffer('Test', 'ascii')) + '<br />';
+        html += "<b>Buffer</b>('测试', 'ucs2'): " + inspect(Buffer('测试', 'ucs2')) + '<br />';
+        html += "<b>Buffer</b>('测试', 'binary'): " + inspect(Buffer('测试', 'binary')) + '<br />';
+        html += "<b>Buffer</b>('测试', 'utf8'): " + inspect(Buffer('测试', 'utf8')) + '<br />';
+        html += "<b>Buffer</b>([1,2,3,4]): " + inspect(Buffer([1,2,3,4])) + '<br />';
+        var aBuf = new ArrayBuffer(4);
+        var arr8 = new Uint8Array(aBuf);
+        arr8[0] = 1; arr8[1] = 2; arr8[2] = 3; arr8[3] = 4;
+        html += "<b>Buffer</b>(ArrayBuffer): " + inspect(Buffer(aBuf)) + '<br />';
+        html += "<b>Buffer</b>(Uint8Array): " + inspect(Buffer(arr8)) + '<br />';
+        html += "<b>Buffer</b>(new Buffer(8)): " + inspect(Buffer(new Buffer(8))) + '<br />';
+        html += '<li>Buffer.fill()</li>\n';
+        var buf1 = new Buffer(8);
+        html += "buf1.<b>fill</b>(0x5a, 0, 8): " + buf1.fill(0x5a, 0, 8) + inspect(buf1) + '<br />\n';
+        var buf2 = new Buffer(buf1);
+        html += "buf2.<b>fill</b>('ab', 2, 6): " + buf2.fill('ab', 2, 6) + inspect(buf2) + '<br />\n';
+        html += '<li>Buffer.compare()</li>\n';
+        html += "buf1.<b>compare</b>(buf2): " + buf1.compare(buf2) + '<br />\n';
+        html += "buf1.<b>equals</b>(buf2): " + buf1.equals(buf2) + '<br />\n';
+        html += '<li>Buffer.indexOf()</li>\n';
+        html += 'buf2.<b>indexOf</b>(buf2.slice(2, 4)): ' + buf2.indexOf(buf2.slice(2, 4)) + '<br />\n';
+        html += 'buf2.<b>indexOf</b>(0x62): ' + buf2.indexOf(0x62) + '<br />\n';
+        html += "buf2.<b>indexOf</b>('abZ'): " + buf2.indexOf('abZ') + '<br />\n';
+        html += "Buffer('测试', 'ucs2').<b>indexOf</b>('试', 0, 'ucs2'): " + Buffer('测试', 'ucs2').indexOf('试', 0, 'ucs2') + '<br />\n';
+        html += '<li>Buffer.slice()</li>\n';
+        html += "buf2.<b>slice</b>(4, 7): " + buf2.slice(4, 7) + '<br />\n';
+        html += '<li>Buffer.concat()</li>\n';
+        html += "Buffer.<b>concat</b>([buf1, buf2]): " + Buffer.concat([buf1, buf2]) + '<br />\n';
+        html += '<li>Buffer.read/writeXXX()</li>\n';
+        buf1.writeInt8(0x7f);
+        html += "buf1.<b>writeInt8</b>(0x7f), <b>readInt8</b>(): " + buf1.readInt8() + '<br />\n';
+        buf1.writeInt16LE(0x7fff);
+        html += "buf1.<b>writeInt16LE</b>(0x7fff), <b>readInt16LE</b>(): " + buf1.readInt16LE() + '<br />\n';
+        buf1.writeInt16BE(0x7fff);
+        html += "buf1.<b>writeInt16BE</b>(0x7fff), <b>readInt16BE</b>(): " + buf1.readInt16BE() + '<br />\n';
+        buf1.writeInt32LE(0x7fffffff);
+        html += "buf1.<b>writeInt32LE</b>(0x7fffffff), <b>readInt32LE</b>(): " + buf1.readInt32LE() + '<br />\n';
+        buf1.writeInt32BE(0x7fffffff);
+        html += "buf1.<b>writeInt32BE</b>(0x7fffffff), <b>readInt32BE</b>(): " + buf1.readInt32BE() + '<br />\n';
+        buf1.writeIntLE(0x7fffffffffff, 0, 6);
+        html += "buf1.<b>writeIntLE</b>(0x7fffffffffff), <b>readIntLE</b>(): " + buf1.readIntLE(0, 6) + '<br />\n';
+        buf1.writeIntBE(0x7fffffffffff, 0, 6);
+        html += "buf1.<b>writeIntBE</b>(0x7fffffffffff), <b>readIntBE</b>(): " + buf1.readIntBE(0, 6) + '<br />\n';
+        buf1.writeUInt8(0xfe);
+        html += "buf1.<b>writeUInt8</b>(0xfe), <b>readUInt8</b>(): " + buf1.readUInt8() + '<br />\n';
+        buf1.writeUInt16LE(0xfffe);
+        html += "buf1.<b>writeUInt16LE</b>(0xfffe), <b>readUInt16LE</b>(): " + buf1.readUInt16LE() + '<br />\n';
+        buf1.writeUInt16BE(0xfffe);
+        html += "buf1.<b>writeUInt16BE</b>(0xfffe), <b>readUInt16BE</b>(): " + buf1.readUInt16BE() + '<br />\n';
+        buf1.writeUInt32LE(0xfffffffe);
+        html += "buf1.<b>writeUInt32LE</b>(0xfffffffe), <b>readUInt32LE</b>(): " + buf1.readUInt32LE() + '<br />\n';
+        buf1.writeUInt32BE(0xfffffffe);
+        html += "buf1.<b>writeUInt32BE</b>(0xfffffffe), <b>readUInt32BE</b>(): " + buf1.readUInt32BE() + '<br />\n';
+        buf1.writeUIntLE(0xfffffffffffe, 0, 6);
+        html += "buf1.<b>writeUIntLE</b>(0xfffffffffffe), <b>readUIntLE</b>(): " + buf1.readUIntLE(0, 6) + '<br />\n';
+        buf1.writeUIntBE(0xfffffffffffe, 0, 6);
+        html += "buf1.<b>writeUIntBE</b>(0xfffffffffffe), <b>readUIntBE</b>(): " + buf1.readUIntBE(0, 6) + '<br />\n';
+        buf1.writeFloatLE(61.42);
+        html += "buf1.<b>writeFloatLE</b>(61.42), <b>readFloatLE</b>(): " + buf1.readFloatLE() + '<br />\n';
+        buf1.writeFloatBE(61.42);
+        html += "buf1.<b>writeFloatBE</b>(61.42), <b>readFloatBE</b>(): " + buf1.readFloatBE() + '<br />\n';
+        buf1.writeDoubleLE(61.42);
+        html += "buf1.<b>writeDoubleLE</b>(61.42), <b>readDoubleLE</b>(): " + buf1.readDoubleLE() + '<br />\n';
+        buf1.writeDoubleBE(61.42);
+        html += "buf1.<b>writeDoubleBE</b>(61.42), <b>readDoubleBE</b>(): " + buf1.readDoubleBE() + '<br />\n';
+        html += '<li>Buffer.toString/write()</li>\n';
+        buf1.fill(0);
+        html += "buf1.<b>write</b>('VGVzdA==', 'base64'): " + buf1.write('VGVzdA==', 'base64') + ", <b>toString</b>('base64'): " + buf1.toString('base64', 0, 4) + '<br />\n';
+        html += "buf1.<b>write</b>('54657374', 'hex'): " + buf1.write('54657374', 'hex') + ", <b>toString</b>('hex'): " + buf1.toString('hex', 0, 4) + '<br />\n';
+        html += "buf1.<b>write</b>('Test1', 'ascii'): " + buf1.write('Test1', 'ascii') + ", <b>toString</b>('ascii'): " + buf1.toString('ascii') + '<br />\n';
+        html += "buf1.<b>write</b>('测试2', 'ucs2'): " + buf1.write('测试2', 'ucs2') + ", <b>toString</b>('ucs2'): " + buf1.toString('ucs2') + '<br />\n';
+        html += "buf1.<b>write</b>('测试3', 'binary'): " + buf1.write('测试3', 'binary') + ", <b>toString</b>('binary'): " + buf1.toString('binary') + '<br />\n';
+        html += "buf1.<b>write</b>('测试4', 'utf8'): " + buf1.write('测试4', 'utf8') + ", <b>toString</b>('utf8'): " + buf1.toString('utf8') + '<br />\n';
+
+        document.getElementById('html_output').innerHTML = html; 
+    };
+
+    </script>
+</head>
+<body bgcolor="white">
+<h3>Node-CEF Buffer Test</h3>
+<div id="html_output"></div>
+</body>
+</html>

@@ -17,7 +17,8 @@ It's based on the stable CEF dll-wrapper API, therefore Node-CEF should be compa
 
 ### Currently available modules:
 
-- [Globals](https://nodejs.org/dist/latest-v4.x/docs/api/globals.html) (see [Differences with Node.js](#differences-with-nodejs))
+- [Buffer](https://nodejs.org/dist/latest-v4.x/docs/api/buffer.html)
+- [Globals](https://nodejs.org/dist/latest-v4.x/docs/api/globals.html)
 - [Modules](https://nodejs.org/dist/latest-v4.x/docs/api/modules.html)
 - [OS](https://nodejs.org/dist/latest-v4.x/docs/api/os.html)
 - [VM](https://nodejs.org/dist/latest-v4.x/docs/api/vm.html)
@@ -26,13 +27,14 @@ It's based on the stable CEF dll-wrapper API, therefore Node-CEF should be compa
 - [Timers](https://nodejs.org/dist/latest-v4.x/docs/api/timers.html)
 - [Utilities](https://nodejs.org/dist/latest-v4.x/docs/api/util.html)
 
+See also [Differences with Node.js](#differences-with-nodejs)
+
 ### Security
 
 Any remote accesses to the `ncjs` module are forbidden, currently only `file://` scheme is the valid source to initialize Node-CEF.
 
 ### What's next:
 
-- [Buffer](https://nodejs.org/dist/latest-v4.x/docs/api/buffer.html)
 - [Child Process](https://nodejs.org/dist/latest-v4.x/docs/api/child_process.html)
 - [Events](https://nodejs.org/dist/latest-v4.x/docs/api/events.html)
 - [File System](https://nodejs.org/dist/latest-v4.x/docs/api/fs.html)
@@ -95,7 +97,7 @@ What we need to do to integrate Node-CEF into your CEF project is just changing 
 
 Now your CEF project owns the Node.js module system, you can test it with:
 ```js
-ncjs.require('os').
+ncjs.require('os').hostname();
 ```
 
 ### Add your own built-in module
@@ -140,7 +142,7 @@ Now you can access `MyModule::Foo()` via Java Script:
 ncjs.process.binding('my_module').foo();
 ```
 
-**Note:** If your render process handler overrides `CefRenderProcessHandler::OnRenderThreadCreated` or `CefRenderProcessHandler::OnWebKitInitialized` methods, please remember to call the corresponding one of `ncjs::RenderProcessHandler`'s in your implementations, otherwise Node-CEF won't work.
+**Note:** If your render process handler overrides any methods of `CefRenderProcessHandler`, please remember to call the corresponding one of `ncjs::RenderProcessHandler`'s in your implementations, otherwise Node-CEF won't work.
 
 ## Differences with Node.js
 
@@ -148,7 +150,7 @@ ncjs.process.binding('my_module').foo();
 
 To accompany general web pages and script, Node-CEF inject a global object identified by `ncjs` to each frame in a sing web page and only will be load when this object get accessed first time, this also improve the performance hit for pages that do not use Node-CEF.
 
-The global `ncjs` object is main module of Node-CEF, all global objects (except the `global` object) defined by Node.js are stored in this object, such as `require`, `process`, etc. You can define a alias for the objects inside `ncjs` for convenience:
+The global `ncjs` object is main module of Node-CEF, all global objects (except the `global` object) defined by Node.js are stored in this object, such as `require`, `process`, etc. You can define aliases for the objects inside `ncjs` for convenience:
 ```js
 var require = ncjs.require;
 ```
@@ -159,7 +161,7 @@ var mod = require('a/module');
 
 ### Search paths for modules
 
-The search paths for `require()` in a web page is NOT relative to the `*.js` file containing `require()` directives but the page itself. This is because all scripts in a web page share a the shame main module `ncjs` which loaded by the web page.
+The search paths for `require()` in a web page is NOT relative to the `*.js` file containing `require()` directives but the page itself. This is because all scripts in a web page share a the same main module `ncjs` which loaded by the web page.
 
 Considering this folder structure:
 ```
@@ -174,7 +176,12 @@ var my_module = ncjs.require('my_module');
 ```
 When `index.html` loads code.js, the module located at `./node_modules/my_module.js` will be loaded but the `./path/to/general/java_script/node_modules/my_module.js` will be invisible to Node-CEF. Try `test/require` for a completed test.
 
-**Note:** All these changes only apply to **web pages**, a Node.js module has its `require`, `exports`, etc, as well as search paths, nothing is changed for modules.
+**Note:** All these changes above only apply to **web pages**, a Node.js module has its `require`, `exports`, etc, as well as search paths, nothing is changed for modules.
+
+### Modules Implementation
+
+#### Buffer
+Because of the missing `ArrayBuffer` and `Uint8Array` supports from CEF, the subscripting operator `buf[]` is not supported, use `buf.get()` and `buf.set()` to access buffer data.
 
 
 ## Compatibilities
