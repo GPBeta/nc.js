@@ -87,16 +87,14 @@
     };
 
     startup.processKillAndExit = function() {
+        // NOTE: process.exit() and process.abort() are forbidden by Node-CEF,
+        // please use window.close() for similar purpose.
         process.exit = function(code) {
-            if (code || code === 0)
-                process.exitCode = code;
+            throw new Error('Illegal invocation: exit(' + (code || 0) + ')');
+        };
 
-            if (!process._exiting) {
-                process._exiting = true;
-                process.emit('exit', process.exitCode || 0);
-            }
-            
-            process.reallyExit(process.exitCode || 0);
+        process.abort = function() {
+            throw new Error('Illegal invocation: abort()');
         };
 
         process.kill = function(pid, sig) {

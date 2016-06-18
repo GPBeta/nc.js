@@ -243,20 +243,6 @@ class ProcessObject : public JsObjecT<ProcessObject> {
         except = consts::str_err_notimpl;
     }
 
-    // process.reallyExit()
-    NCJS_OBJECT_FUNCTION(Exit)(CefRefPtr<CefV8Value> object,
-        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
-    {
-        except = consts::str_err_notimpl;
-    }
-
-    // process.abort()
-    NCJS_OBJECT_FUNCTION(Abort)(CefRefPtr<CefV8Value> object,
-        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
-    {
-        except = consts::str_err_notimpl;
-    }
-
     // process.chdir()
     NCJS_OBJECT_FUNCTION(Chdir)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
@@ -426,8 +412,6 @@ class ProcessObject : public JsObjecT<ProcessObject> {
         NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("_stopProfilerIdleNotifier"), StopProfilerIdleNotifier)
         NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("_getActiveRequests"), GetActiveRequests)
         NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("_getActiveHandles"), GetActiveHandles)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("reallyExit"), Exit)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("abort"), Abort)
         NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("chdir"), Chdir)
         NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("cwd"), Cwd)
         NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("umask"), Umask)
