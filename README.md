@@ -26,6 +26,7 @@ It's based on the stable CEF dll-wrapper API, therefore Node-CEF should be compa
 - [Punycode](https://nodejs.org/dist/latest-v4.x/docs/api/punycode.html)
 - [Query String](https://nodejs.org/dist/latest-v4.x/docs/api/querystring.html)
 - [Timers](https://nodejs.org/dist/latest-v4.x/docs/api/timers.html)
+- [URL](https://nodejs.org/dist/latest-v4.x/docs/api/url.html)
 - [Utilities](https://nodejs.org/dist/latest-v4.x/docs/api/util.html)
 
 See also [Differences with Node.js](#differences-with-nodejs)
@@ -41,7 +42,6 @@ Any remote accesses to the `ncjs` module are forbidden, currently only `file://`
 - [File System](https://nodejs.org/dist/latest-v4.x/docs/api/fs.html)
 - [Stream](https://nodejs.org/dist/latest-v4.x/docs/api/stream.html)
 - [String Decoder](https://nodejs.org/dist/latest-v4.x/docs/api/string_decoder.html)
-- [URL](https://nodejs.org/dist/latest-v4.x/docs/api/url.html)
 - Supports for remote modules (Sync/Async).
 
 Please create pull requests to help us add supports for the rest modules of Node.js.

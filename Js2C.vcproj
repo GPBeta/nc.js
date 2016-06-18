@@ -28,7 +28,7 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
-				CommandLine="cd src&#x0D;&#x0A;..\tool\js2c.py ..\include\ncjs\native\nc.h native\nc.js&#x0D;&#x0A;..\tool\js2c.py ..\include\ncjs\native\modules.h native\assert.js native\buffer.js native\constants.js native\events.js native\fs.js native\module.js native\os.js native\path.js native\process.js native\punycode.js native\querystring.js native\timers.js native\util.js native\vm.js native\internal\cluster.js native\internal\freelist.js native\internal\module.js native\internal\util.js"
+				CommandLine="cd src&#x0D;&#x0A;..\tool\js2c.py ..\include\ncjs\native\nc.h native\nc.js&#x0D;&#x0A;..\tool\js2c.py ..\include\ncjs\native\modules.h native\assert.js native\buffer.js native\constants.js native\events.js native\fs.js native\module.js native\os.js native\path.js native\process.js native\punycode.js native\querystring.js native\timers.js native\url.js native\util.js native\vm.js native\internal\cluster.js native\internal\freelist.js native\internal\module.js native\internal\util.js"
 				AdditionalDependencies="src/native/nc.js"
 				Outputs="include\ncjs\native\ncjs.h;include\ncjs\native\modules.h"
 			/>
@@ -92,7 +92,7 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
-				CommandLine="cd src&#x0D;&#x0A;..\tool\js2c.py ..\include\ncjs\native\nc.h native\nc.js&#x0D;&#x0A;..\tool\js2c.py ..\include\ncjs\native\modules.h native\assert.js native\buffer.js native\constants.js native\events.js native\fs.js native\module.js native\os.js native\path.js native\process.js native\punycode.js native\querystring.js native\timers.js native\util.js native\vm.js native\internal\cluster.js native\internal\freelist.js native\internal\module.js native\internal\util.js"
+				CommandLine="cd src&#x0D;&#x0A;..\tool\js2c.py ..\include\ncjs\native\nc.h native\nc.js&#x0D;&#x0A;..\tool\js2c.py ..\include\ncjs\native\modules.h native\assert.js native\buffer.js native\constants.js native\events.js native\fs.js native\module.js native\os.js native\path.js native\process.js native\punycode.js native\querystring.js native\timers.js native\url.js native\util.js native\vm.js native\internal\cluster.js native\internal\freelist.js native\internal\module.js native\internal\util.js"
 				AdditionalDependencies="src/native/nc.js"
 				Outputs="include\ncjs\native\ncjs.h;include\ncjs\native\modules.h"
 			/>
@@ -158,7 +158,7 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
-				CommandLine="cd src&#x0D;&#x0A;..\tool\js2c.py ..\include\ncjs\native\nc.h native\nc.js&#x0D;&#x0A;..\tool\js2c.py ..\include\ncjs\native\modules.h native\assert.js native\buffer.js native\constants.js native\events.js native\fs.js native\module.js native\os.js native\path.js native\process.js native\punycode.js native\querystring.js native\timers.js native\util.js native\vm.js native\internal\cluster.js native\internal\freelist.js native\internal\module.js native\internal\util.js"
+				CommandLine="cd src&#x0D;&#x0A;..\tool\js2c.py ..\include\ncjs\native\nc.h native\nc.js&#x0D;&#x0A;..\tool\js2c.py ..\include\ncjs\native\modules.h native\assert.js native\buffer.js native\constants.js native\events.js native\fs.js native\module.js native\os.js native\path.js native\process.js native\punycode.js native\querystring.js native\timers.js native\url.js native\util.js native\vm.js native\internal\cluster.js native\internal\freelist.js native\internal\module.js native\internal\util.js"
 				AdditionalDependencies="src/native/nc.js"
 				Outputs="include\ncjs\native\ncjs.h;include\ncjs\native\modules.h"
 			/>
@@ -222,7 +222,7 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
-				CommandLine="cd src&#x0D;&#x0A;..\tool\js2c.py ..\include\ncjs\native\nc.h native\nc.js&#x0D;&#x0A;..\tool\js2c.py ..\include\ncjs\native\modules.h native\assert.js native\buffer.js native\constants.js native\events.js native\fs.js native\module.js native\os.js native\path.js native\process.js native\punycode.js native\querystring.js native\timers.js native\util.js native\vm.js native\internal\cluster.js native\internal\freelist.js native\internal\module.js native\internal\util.js"
+				CommandLine="cd src&#x0D;&#x0A;..\tool\js2c.py ..\include\ncjs\native\nc.h native\nc.js&#x0D;&#x0A;..\tool\js2c.py ..\include\ncjs\native\modules.h native\assert.js native\buffer.js native\constants.js native\events.js native\fs.js native\module.js native\os.js native\path.js native\process.js native\punycode.js native\querystring.js native\timers.js native\url.js native\util.js native\vm.js native\internal\cluster.js native\internal\freelist.js native\internal\module.js native\internal\util.js"
 				AdditionalDependencies="src/native/nc.js"
 				Outputs="include\ncjs\native\ncjs.h;include\ncjs\native\modules.h"
 			/>
@@ -336,6 +336,10 @@
 			</File>
 			<File
 				RelativePath=".\src\native\timers.js"
+				>
+			</File>
+			<File
+				RelativePath=".\src\native\url.js"
 				>
 			</File>
 			<File
