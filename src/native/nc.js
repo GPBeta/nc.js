@@ -24,6 +24,7 @@
         startup.globalVariables();
         startup.globalTimeouts();
 
+        startup.processAssert();
         startup.processVariables();
         // startup.processConfig();
         startup.processNextTick();
@@ -51,6 +52,13 @@
         const timers = NativeModule.require('timers');
         global.setImmediate = timers.setImmediate;
         global.clearImmediate = timers.clearImmediate;
+    };
+
+    var assert;
+    startup.processAssert = function() {
+        assert = process.assert = function(x, msg) {
+            if (!x) throw new Error(msg || 'assertion error');
+        };
     };
 
     startup._lazyConstants = null;
