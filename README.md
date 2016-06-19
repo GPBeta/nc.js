@@ -3,16 +3,17 @@
 
 A CEF (Chromium Embedded Framework) extension which provides a Node.js module system for your CEF projects.
 
-![Node-CEF](http://ww2.sinaimg.cn/large/6a6bd9c5gw1f4f46hnar5j20o60i2ju7.jpg)
+![Node-CEF](http://ww2.sinaimg.cn/large/6a6bd9c5gw1f50q3d5xqbj20og0hsq7g.jpg)
 
-It's based on the stable CEF dll-wrapper API, therefore Node-CEF should be compatible with most CEF3 builds without modifying the `V8` engine or compiling a custom `libcef.dll`.
+It's based on the stable CEF dll-wrapper API, therefore Node-CEF should be compatible with most CEF3 builds without modifying the `V8` engine or compiling a custom `libcef.dll`. Node-CEF is designed to work with general web pages, and it won't crash your render process  like other Node.js-CEF glued projects do when any uncaught errors occur.
 
 **Note:** The native (Java Script) modules are completely compatible with Node.js while the built-in and linked (*.node) modules are not ABI compatible, but you can modify these modules and build them with Node-CEF easily.
 
 ## Main Features
 
-- Node.js compatible module system for your CEF project.
-- Very simple templates for writing and registering your built-in modules.
+- [Node.js](https://nodejs.org/en/) compatible module system for your CEF project.
+- Managing and installing packages with [npm](https://www.npmjs.com/).
+- Writing and registering your extra built-in modules easily.
 - Debugging modules with Chrome DevTools.
 
 ### Currently available modules:
@@ -50,10 +51,10 @@ Please create pull requests to help us add supports for the rest modules of Node
 
 ### Build Node-CEF
 
-Requirement: VS2005 (VC8.0) and above
+Requirement: VS2005 (VC8.0) and above, Python 2.x
 
-1. Open Node-Cef.sln with your Visual Studio.
-2. Add your CEF path to "Additional Include Directories" of the Node-CEF project.
+1. Open `Node-CEF.sln` with your Visual Studio.
+2. Add your CEF path to "Additional Include Directories" of the `libcef_node` project.
 3. Build solution.
 
 ### Use Node-CEF in your CEF project
@@ -93,7 +94,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance,
   return CefExecuteProcess(main_args, new MyNodeCefApp, NULL);
 }
 ```
-What we need to do to integrate Node-CEF into your CEF project is just changing the inheritance from `CefRenderProcessHandler` to `ncjs::RenderProcessHandler` for your `CefApp` based class.
+What we need to do is just changing the inheritance from `CefRenderProcessHandler` to `ncjs::RenderProcessHandler` for your `CefApp` based class.
 
 Now your CEF project owns the Node.js module system, you can test it with:
 ```js
