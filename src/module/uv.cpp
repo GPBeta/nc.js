@@ -57,7 +57,7 @@ class ModuleUV : public JsObjecT<ModuleUV> {
     // object factory
 
     NCJS_BEGIN_OBJECT_FACTORY()
-        NCJS_MAP_OBJECT_FUNCTION(consts::str_errname, ErrName)
+        NCJS_MAP_OBJECT_FUNCTION("errname", ErrName)
 
         NCJS_MAP_OBJECT_EXTRA(DefineUvConstants)
     NCJS_END_OBJECT_FACTORY()

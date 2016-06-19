@@ -18,7 +18,8 @@
 #define NCJS_NAME_STRING "Node-CEF"
 #define NCJS_ALIAS_STRING "nc.js"
 
-#define NCJS_MAKESTR(_STR) #_STR
+#define _NCJS_MAKESTR(_STR) #_STR
+#define NCJS_MAKESTR(_STR) _NCJS_MAKESTR(_STR)
 
 #define NCJS_DEFINE_PROPERTY(_TYPE, _OBJECT, _KEY, _VALUE, _ATTRIBUTE) do \
     { \

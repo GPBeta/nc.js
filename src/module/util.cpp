@@ -43,7 +43,7 @@ class ModuleUtil : public JsObjecT<ModuleUtil> {
     // object factory
 
     NCJS_BEGIN_OBJECT_FACTORY()
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("isDate"), IsDate)
+        NCJS_MAP_OBJECT_FUNCTION("isDate", IsDate)
     NCJS_END_OBJECT_FACTORY()
 
 };

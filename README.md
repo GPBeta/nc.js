@@ -121,7 +121,7 @@ class MyModule : public JsObjecT<MyModule> {
     // object factory
 
     NCJS_BEGIN_OBJECT_FACTORY()
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("foo"), Foo)
+        NCJS_MAP_OBJECT_FUNCTION("foo", Foo)
     NCJS_END_OBJECT_FACTORY()
 
 };

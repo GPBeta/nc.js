@@ -39,43 +39,27 @@ namespace consts {
 // strings
 
 _NCJS_CONST_DECLARE_CEFSTR(str_address, "address");
-_NCJS_CONST_DECLARE_CEFSTR(str_arch, "arch");
 _NCJS_CONST_DECLARE_CEFSTR(str_args, "args");
 _NCJS_CONST_DECLARE_CEFSTR(str_argv, "argv");
 _NCJS_CONST_DECLARE_CEFSTR(str_binding, "binding");
 _NCJS_CONST_DECLARE_CEFSTR(str_cache, "_cache");
-_NCJS_CONST_DECLARE_CEFSTR(str_cef, "cef");
-_NCJS_CONST_DECLARE_CEFSTR(str_chromium, "chromium");
 _NCJS_CONST_DECLARE_CEFSTR(str_emit, "emit");
-_NCJS_CONST_DECLARE_CEFSTR(str_env, "env");
-_NCJS_CONST_DECLARE_CEFSTR(str_errname, "errname");
-_NCJS_CONST_DECLARE_CEFSTR(str_events, "_events");
 _NCJS_CONST_DECLARE_CEFSTR(str_exec_argv, "execArgv");
 _NCJS_CONST_DECLARE_CEFSTR(str_exec_path, "execPath");
 _NCJS_CONST_DECLARE_CEFSTR(str_family, "family");
-_NCJS_CONST_DECLARE_CEFSTR(str_features, "features");
 _NCJS_CONST_DECLARE_CEFSTR(str_file, "file");
-_NCJS_CONST_DECLARE_CEFSTR(str_flags, "flags");
-_NCJS_CONST_DECLARE_CEFSTR(str_icu, "icu");
 _NCJS_CONST_DECLARE_CEFSTR(str_idle, "idle");
 _NCJS_CONST_DECLARE_CEFSTR(str_internal, "internal");
 _NCJS_CONST_DECLARE_CEFSTR(str_IPv4, "IPv4");
 _NCJS_CONST_DECLARE_CEFSTR(str_IPv6, "IPv6");
 _NCJS_CONST_DECLARE_CEFSTR(str_irq, "irq");
 _NCJS_CONST_DECLARE_CEFSTR(str_length, "length");
-_NCJS_CONST_DECLARE_CEFSTR(str_libcef, "libcef");
-_NCJS_CONST_DECLARE_CEFSTR(str_lts, "lts");
 _NCJS_CONST_DECLARE_CEFSTR(str_mac, "mac");
 _NCJS_CONST_DECLARE_CEFSTR(str_model, "model");
 _NCJS_CONST_DECLARE_CEFSTR(str_modules, "modules");
 _NCJS_CONST_DECLARE_CEFSTR(str_module_load_list, "moduleLoadList");
-_NCJS_CONST_DECLARE_CEFSTR(str_name, "name");
 _NCJS_CONST_DECLARE_CEFSTR(str_netmask, "netmask");
 _NCJS_CONST_DECLARE_CEFSTR(str_nice, "nice");
-_NCJS_CONST_DECLARE_CEFSTR(str_node, "node");
-_NCJS_CONST_DECLARE_CEFSTR(str_openssl, "openssl");
-_NCJS_CONST_DECLARE_CEFSTR(str_pid, "pid");
-_NCJS_CONST_DECLARE_CEFSTR(str_platform, "platform");
 _NCJS_CONST_DECLARE_CEFSTR(str_rss, "rss");
 _NCJS_CONST_DECLARE_CEFSTR(str_scopeid, "scopeid");
 _NCJS_CONST_DECLARE_CEFSTR(str_speed, "speed");
@@ -84,9 +68,6 @@ _NCJS_CONST_DECLARE_CEFSTR(str_times, "times");
 _NCJS_CONST_DECLARE_CEFSTR(str_uncaught_except, "uncaughtException");
 _NCJS_CONST_DECLARE_CEFSTR(str_unknown, "<unknown>");
 _NCJS_CONST_DECLARE_CEFSTR(str_user, "user");
-_NCJS_CONST_DECLARE_CEFSTR(str_uv, "uv");
-_NCJS_CONST_DECLARE_CEFSTR(str_version, "version");
-_NCJS_CONST_DECLARE_CEFSTR(str_versions, "versions");
 
 _NCJS_CONST_DECLARE_CEFSTR(str_err_notimpl, "Not Implemented.");
 

@@ -703,21 +703,21 @@ class BufferPrototype : public JsObjecT<BufferPrototype> {
     // object builder
 
     NCJS_BEGIN_OBJECT_BUILDER()
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("asciiSlice"),  AsciiSlice)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("base64Slice"), Base64Slice)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("binarySlice"), BinarySlice)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("hexSlice"),    HexSlice)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("ucs2Slice"),   Ucs2Slice)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("utf8Slice"),   Utf8Slice)
+        NCJS_MAP_OBJECT_FUNCTION("asciiSlice",  AsciiSlice)
+        NCJS_MAP_OBJECT_FUNCTION("base64Slice", Base64Slice)
+        NCJS_MAP_OBJECT_FUNCTION("binarySlice", BinarySlice)
+        NCJS_MAP_OBJECT_FUNCTION("hexSlice",    HexSlice)
+        NCJS_MAP_OBJECT_FUNCTION("ucs2Slice",   Ucs2Slice)
+        NCJS_MAP_OBJECT_FUNCTION("utf8Slice",   Utf8Slice)
 
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("asciiWrite"),  AsciiWrite)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("base64Write"), Base64Write)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("binaryWrite"), BinaryWrite)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("hexWrite"),    HexWrite)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("ucs2Write"),   Ucs2Write)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("utf8Write"),   Utf8Write)
+        NCJS_MAP_OBJECT_FUNCTION("asciiWrite",  AsciiWrite)
+        NCJS_MAP_OBJECT_FUNCTION("base64Write", Base64Write)
+        NCJS_MAP_OBJECT_FUNCTION("binaryWrite", BinaryWrite)
+        NCJS_MAP_OBJECT_FUNCTION("hexWrite",    HexWrite)
+        NCJS_MAP_OBJECT_FUNCTION("ucs2Write",   Ucs2Write)
+        NCJS_MAP_OBJECT_FUNCTION("utf8Write",   Utf8Write)
 
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("copy"),        Copy)
+        NCJS_MAP_OBJECT_FUNCTION("copy",        Copy)
     NCJS_END_OBJECT_BUILDER()
 };
 
@@ -796,12 +796,12 @@ class BindingObject : public JsObjecT<BindingObject> {
 
     NCJS_BEGIN_OBJECT_BUILDER()
         // functions
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("createBuffer"), CreateBuffer)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("subarray"), SubArray)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("setAt"), SetAt)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("getAt"), GetAt)
+        NCJS_MAP_OBJECT_FUNCTION("createBuffer", CreateBuffer)
+        NCJS_MAP_OBJECT_FUNCTION("subarray", SubArray)
+        NCJS_MAP_OBJECT_FUNCTION("setAt", SetAt)
+        NCJS_MAP_OBJECT_FUNCTION("getAt", GetAt)
         // accessors
-        NCJS_MAP_OBJECT_ACCESSOR(consts::str_flags, FlagsAccessor)
+        NCJS_MAP_OBJECT_ACCESSOR("flags", FlagsAccessor)
     NCJS_END_OBJECT_BUILDER()
 };
 
@@ -1072,30 +1072,30 @@ class ModuleBuffer : public JsObjecT<ModuleBuffer> {
 
     NCJS_BEGIN_OBJECT_FACTORY()
         // constants
-        NCJS_MAP_OBJECT_READONLY(Int, NCJS_REFTEXT("kMaxLength"),               MAX_LENGTH)
-        NCJS_MAP_OBJECT_READONLY(Int, NCJS_REFTEXT("kStringMaxLength"),  STRING_MAX_LENGTH)
+        NCJS_MAP_OBJECT_READONLY(Int, "kMaxLength",               MAX_LENGTH)
+        NCJS_MAP_OBJECT_READONLY(Int, "kStringMaxLength",  STRING_MAX_LENGTH)
 
         // functions
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("setupBufferJS"), SetupBufferJS)
+        NCJS_MAP_OBJECT_FUNCTION("setupBufferJS", SetupBufferJS)
 
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("createFromString"),      CreateFromString)
+        NCJS_MAP_OBJECT_FUNCTION("createFromString",      CreateFromString)
 
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("byteLengthUtf8"), ByteLengthUtf8)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("compare"),        Compare)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("fill"),           Fill)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("indexOfBuffer"),  IndexOfBuffer)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("indexOfNumber"),  IndexOfNumber)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("indexOfString"),  IndexOfString)
+        NCJS_MAP_OBJECT_FUNCTION("byteLengthUtf8", ByteLengthUtf8)
+        NCJS_MAP_OBJECT_FUNCTION("compare",        Compare)
+        NCJS_MAP_OBJECT_FUNCTION("fill",           Fill)
+        NCJS_MAP_OBJECT_FUNCTION("indexOfBuffer",  IndexOfBuffer)
+        NCJS_MAP_OBJECT_FUNCTION("indexOfNumber",  IndexOfNumber)
+        NCJS_MAP_OBJECT_FUNCTION("indexOfString",  IndexOfString)
 
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("readDoubleBE"), ReadDoubleBE)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("readDoubleLE"), ReadDoubleLE)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("readFloatBE"),  ReadFloatBE)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("readFloatLE"),  ReadFloatLE)
+        NCJS_MAP_OBJECT_FUNCTION("readDoubleBE", ReadDoubleBE)
+        NCJS_MAP_OBJECT_FUNCTION("readDoubleLE", ReadDoubleLE)
+        NCJS_MAP_OBJECT_FUNCTION("readFloatBE",  ReadFloatBE)
+        NCJS_MAP_OBJECT_FUNCTION("readFloatLE",  ReadFloatLE)
 
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("writeDoubleBE"), WriteDoubleBE)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("writeDoubleLE"), WriteDoubleLE)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("writeFloatBE"),  WriteFloatBE)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("writeFloatLE"),  WriteFloatLE)
+        NCJS_MAP_OBJECT_FUNCTION("writeDoubleBE", WriteDoubleBE)
+        NCJS_MAP_OBJECT_FUNCTION("writeDoubleLE", WriteDoubleLE)
+        NCJS_MAP_OBJECT_FUNCTION("writeFloatBE",  WriteFloatBE)
+        NCJS_MAP_OBJECT_FUNCTION("writeFloatLE",  WriteFloatLE)
     NCJS_END_OBJECT_FACTORY()
 
 };

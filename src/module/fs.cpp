@@ -385,16 +385,16 @@ class ModuleFS : public JsObjecT<ModuleFS> {
     // object factory
 
     NCJS_BEGIN_OBJECT_FACTORY()
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("FSInitialize"), FSInitialize)
+        NCJS_MAP_OBJECT_FUNCTION("FSInitialize", FSInitialize)
 
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("internalModuleReadFile"), InternalModuleReadFile)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("internalModuleStat"), InternalModuleStat)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("stat"), Stat)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("lstat"), LStat)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("fstat"), FStat)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("read"), Read)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("open"), Open)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("close"), Close)
+        NCJS_MAP_OBJECT_FUNCTION("internalModuleReadFile", InternalModuleReadFile)
+        NCJS_MAP_OBJECT_FUNCTION("internalModuleStat", InternalModuleStat)
+        NCJS_MAP_OBJECT_FUNCTION("stat", Stat)
+        NCJS_MAP_OBJECT_FUNCTION("lstat", LStat)
+        NCJS_MAP_OBJECT_FUNCTION("fstat", FStat)
+        NCJS_MAP_OBJECT_FUNCTION("read", Read)
+        NCJS_MAP_OBJECT_FUNCTION("open", Open)
+        NCJS_MAP_OBJECT_FUNCTION("close", Close)
     NCJS_END_OBJECT_FACTORY()
 
 };

@@ -36,25 +36,6 @@ namespace ncjs {
 /// ============================================================================
 
 /// ----------------------------------------------------------------------------
-/// TestObject
-/// ----------------------------------------------------------------------------
-
-class TestObject : public JsObjecT<TestObject, false> {
-
-    NCJS_OBJECT_FUNCTION(Func)(CefRefPtr<CefV8Value> object,
-        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
-    {
-        retval = CefV8Value::CreateString(NCJS_REFTEXT("Nested Object Function Test"));
-    }
-
-    // object factory
-
-    NCJS_BEGIN_OBJECT_FACTORY()
-        NCJS_MAP_OBJECT_FUNCTION("func", Func)
-    NCJS_END_OBJECT_FACTORY()
-};
-
-/// ----------------------------------------------------------------------------
 /// ModuleOS
 /// ----------------------------------------------------------------------------
 
@@ -317,19 +298,17 @@ class ModuleOS : public JsObjecT<ModuleOS> {
     // object factory
 
     NCJS_BEGIN_OBJECT_FACTORY()
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("getHostname"),           GetHostname)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("getOSType"),             GetOSType)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("getOSRelease"),          GetOSRelease)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("getCPUs"),               GetCPUs)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("getFreeMemory"),         GetFreeMemory)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("getTotalMemory"),        GetTotalMemory)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("getUptime"),             GetUptime)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("getLoadAvg"),            GetLoadAvg)
-        NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("getHomeDirectory"),      GetHomeDirectory)
-		NCJS_MAP_OBJECT_FUNCTION(NCJS_REFTEXT("getInterfaceAddresses"), GetInterfaceAddresses)
-        NCJS_MAP_OBJECT(Bool,    NCJS_REFTEXT("isBigEndian"),           Environment::IsBE())
-
-        NCJS_MAP_OBJECT_FACTORY(NCJS_REFTEXT("testObject"), TestObject)
+        NCJS_MAP_OBJECT_FUNCTION("getHostname",           GetHostname)
+        NCJS_MAP_OBJECT_FUNCTION("getOSType",             GetOSType)
+        NCJS_MAP_OBJECT_FUNCTION("getOSRelease",          GetOSRelease)
+        NCJS_MAP_OBJECT_FUNCTION("getCPUs",               GetCPUs)
+        NCJS_MAP_OBJECT_FUNCTION("getFreeMemory",         GetFreeMemory)
+        NCJS_MAP_OBJECT_FUNCTION("getTotalMemory",        GetTotalMemory)
+        NCJS_MAP_OBJECT_FUNCTION("getUptime",             GetUptime)
+        NCJS_MAP_OBJECT_FUNCTION("getLoadAvg",            GetLoadAvg)
+        NCJS_MAP_OBJECT_FUNCTION("getHomeDirectory",      GetHomeDirectory)
+		NCJS_MAP_OBJECT_FUNCTION("getInterfaceAddresses", GetInterfaceAddresses)
+        NCJS_MAP_OBJECT(Bool,    "isBigEndian",           Environment::IsBE())
     NCJS_END_OBJECT_FACTORY()
 
 };
