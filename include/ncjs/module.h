@@ -237,7 +237,7 @@ public:
 
 // create an instance for each object
 template <class T>
-class JsObjecT<T, false> {
+class JsObjecT<T, false> : public CefBase {
 public:
     typedef T _object_t;
 
