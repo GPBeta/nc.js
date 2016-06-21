@@ -50,7 +50,8 @@ namespace ncjs {
 const char* default_cipher_list = DEFAULT_CIPHER_LIST_CORE;
 #endif
 
-void DefineErrnoConstants(CefRefPtr<Environment> env, CefRefPtr<CefV8Value> target)
+void DefineErrnoConstants(CefRefPtr<Environment> env, CefRefPtr<CefV8Context> ctx,
+                          CefRefPtr<CefV8Value> target)
 {
 #ifdef E2BIG
   NCJS_PROPERTY_CONST_AUTO(Double, target, E2BIG);
@@ -369,7 +370,8 @@ void DefineErrnoConstants(CefRefPtr<Environment> env, CefRefPtr<CefV8Value> targ
 #endif
 }
 
-void DefineWindowsErrorConstants(CefRefPtr<Environment> env, CefRefPtr<CefV8Value> target)
+void DefineWindowsErrorConstants(CefRefPtr<Environment> env, CefRefPtr<CefV8Context> ctx,
+                                 CefRefPtr<CefV8Value> target)
 {
 #ifdef WSAEINTR
   NCJS_PROPERTY_CONST_AUTO(Double, target, WSAEINTR);
@@ -604,7 +606,8 @@ void DefineWindowsErrorConstants(CefRefPtr<Environment> env, CefRefPtr<CefV8Valu
 #endif
 }
 
-void DefineSignalConstants(CefRefPtr<Environment> env, CefRefPtr<CefV8Value> target)
+void DefineSignalConstants(CefRefPtr<Environment> env, CefRefPtr<CefV8Context> ctx,
+                           CefRefPtr<CefV8Value> target)
 {
 #ifdef SIGHUP
   NCJS_PROPERTY_CONST_AUTO(Double, target, SIGHUP);
@@ -750,7 +753,8 @@ void DefineSignalConstants(CefRefPtr<Environment> env, CefRefPtr<CefV8Value> tar
 #endif
 }
 
-void DefineOpenSSLConstants(CefRefPtr<Environment> env, CefRefPtr<CefV8Value> target)
+void DefineOpenSSLConstants(CefRefPtr<Environment> env, CefRefPtr<CefV8Context> ctx,
+                            CefRefPtr<CefV8Value> target)
 {
 #ifdef SSL_OP_ALL
     NCJS_PROPERTY_CONST_AUTO(Double, target, SSL_OP_ALL);
@@ -995,7 +999,8 @@ void DefineOpenSSLConstants(CefRefPtr<Environment> env, CefRefPtr<CefV8Value> ta
 #endif
 }
 
-void DefineSystemConstants(CefRefPtr<Environment> env, CefRefPtr<CefV8Value> target)
+void DefineSystemConstants(CefRefPtr<Environment> env, CefRefPtr<CefV8Context> ctx,
+                           CefRefPtr<CefV8Value> target)
 {
   // file access modes
   NCJS_PROPERTY_CONST_AUTO(Double, target, O_RDONLY);
@@ -1135,12 +1140,14 @@ void DefineSystemConstants(CefRefPtr<Environment> env, CefRefPtr<CefV8Value> tar
 #endif
 }
 
-void DefineUVConstants(CefRefPtr<Environment> env, CefRefPtr<CefV8Value> target)
+void DefineUVConstants(CefRefPtr<Environment> env, CefRefPtr<CefV8Context> ctx,
+                       CefRefPtr<CefV8Value> target)
 {
   NCJS_PROPERTY_CONST_AUTO(Double, target, UV_UDP_REUSEADDR);
 }
 
-void DefineCryptoConstants(CefRefPtr<Environment> env, CefRefPtr<CefV8Value> target)
+void DefineCryptoConstants(CefRefPtr<Environment> env, CefRefPtr<CefV8Context> ctx,
+                           CefRefPtr<CefV8Value> target)
 {
 #if HAVE_OPENSSL
   NCJS_PROPERTY_CONST_AUTO(String, target,

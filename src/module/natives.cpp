@@ -28,7 +28,8 @@ namespace ncjs {
 
 const CefString& GetMainSource() { return natives::s_nc; }
 
-void DefineJavaScript(CefRefPtr<Environment> env, CefRefPtr<CefV8Value> target)
+void DefineJavaScript(CefRefPtr<Environment> env, CefRefPtr<CefV8Context> ctx,
+                      CefRefPtr<CefV8Value> target)
 {
     using namespace natives;
 

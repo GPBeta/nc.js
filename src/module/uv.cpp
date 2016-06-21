@@ -29,7 +29,8 @@ namespace ncjs {
 /// implementation
 /// ============================================================================
 
-void DefineUvConstants(CefRefPtr<Environment> env, CefRefPtr<CefV8Value> target)
+void DefineUvConstants(CefRefPtr<Environment> env, CefRefPtr<CefV8Context> ctx,
+                       CefRefPtr<CefV8Value> target)
 {
 #define V(_NAME, _) NCJS_PROPERTY_CONST_AUTO(Int, target, UV_##_NAME);
     UV_ERRNO_MAP(V)

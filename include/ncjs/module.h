@@ -169,7 +169,7 @@
 
 
 #define NCJS_MAP_OBJECT_EXTRA(_FUNCTION) \
-    _FUNCTION(_environment, _object);
+    _FUNCTION(_environment, _context, _object);
 
 
 #define NCJS_DEFINE_MODULE(_MODULE, _FACTORY) \
