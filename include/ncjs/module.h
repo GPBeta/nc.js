@@ -83,6 +83,22 @@
     }
 
 
+#define NCJS_BEGIN_CLASS_FACTORY(_CTOR) \
+    public: \
+    static CefRefPtr<CefV8Value> ObjectFactory(CefRefPtr<Environment> _environment, \
+                                               CefRefPtr<CefV8Context> _context) \
+    { \
+        CefRefPtr<_object_t> _thiz = _object_t::GetInstance(); \
+        _thiz->m_##_CTOR.Initial(_thiz); \
+        CefRefPtr<CefV8Value> _constructor =  \
+            CefV8Value::CreateFunction(NCJS_REFTEXT(NCJS_MAKESTR(_CTOR)), &_thiz->m_##_CTOR); \
+        CefRefPtr<CefV8Value> _object = _constructor->GetValue(consts::str_prototype);
+
+#define NCJS_END_CLASS_FACTORY() \
+        return _constructor; \
+    }
+
+
 #define NCJS_BEGIN_OBJECT_BUILDER() \
     public: \
     static void ObjectBuilder(CefRefPtr<Environment> _environment, \
@@ -150,6 +166,7 @@
 #define NCJS_MAP_OBJECT_ACCESSOR_CONSTANT(_NAME, _ACCESSOR) \
     NCJS_MAP_OBJECT_ACCESSOR_X(_NAME, _ACCESSOR, \
         CefV8Value::PropertyAttribute(V8_PROPERTY_ATTRIBUTE_READONLY | V8_PROPERTY_ATTRIBUTE_DONTDELETE))
+
 
 #define NCJS_MAP_OBJECT_EXTRA(_FUNCTION) \
     _FUNCTION(_environment, _object);

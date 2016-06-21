@@ -1223,7 +1223,7 @@ function FSWatcher() {
     }
   };
 }
-//util.inherits(FSWatcher, EventEmitter);
+util.inherits(FSWatcher, EventEmitter);
 
 FSWatcher.prototype.start = function(filename, persistent, recursive) {
   nullCheck(filename);
@@ -1295,7 +1295,7 @@ function StatWatcher() {
     self.emit('stop');
   };
 }
-//util.inherits(StatWatcher, EventEmitter);
+util.inherits(StatWatcher, EventEmitter);
 
 
 StatWatcher.prototype.start = function(filename, persistent, interval) {

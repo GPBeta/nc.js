@@ -60,6 +60,7 @@ _NCJS_CONST_DECLARE_CEFSTR(str_modules, "modules");
 _NCJS_CONST_DECLARE_CEFSTR(str_module_load_list, "moduleLoadList");
 _NCJS_CONST_DECLARE_CEFSTR(str_netmask, "netmask");
 _NCJS_CONST_DECLARE_CEFSTR(str_nice, "nice");
+_NCJS_CONST_DECLARE_CEFSTR(str_prototype, "prototype");
 _NCJS_CONST_DECLARE_CEFSTR(str_rss, "rss");
 _NCJS_CONST_DECLARE_CEFSTR(str_scopeid, "scopeid");
 _NCJS_CONST_DECLARE_CEFSTR(str_speed, "speed");

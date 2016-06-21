@@ -126,6 +126,41 @@ CefRefPtr<CefV8Value> BuildStatsObject(CefRefPtr<Environment> env, const uv_stat
 }
 
 /// ----------------------------------------------------------------------------
+/// StatWatcherPrototype
+/// ----------------------------------------------------------------------------
+
+class StatWatcher : public JsObjecT<StatWatcher> {
+
+    // StatWatcher.start()
+    NCJS_OBJECT_FUNCTION(Start)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        except = consts::str_err_notimpl;
+    }
+
+   // StatWatcher.stop()
+    NCJS_OBJECT_FUNCTION(Stop)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        except = consts::str_err_notimpl;
+    }
+
+    // StatWatcher()
+    NCJS_OBJECT_FUNCTION(Constructor)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        except = consts::str_err_notimpl;
+    }
+
+    // class factory
+
+    NCJS_BEGIN_CLASS_FACTORY(Constructor)
+        NCJS_MAP_OBJECT_FUNCTION("start", Start)
+        NCJS_MAP_OBJECT_FUNCTION("stop", Stop)
+    NCJS_END_CLASS_FACTORY()
+};
+
+/// ----------------------------------------------------------------------------
 /// ModuleFS
 /// ----------------------------------------------------------------------------
 
@@ -385,6 +420,10 @@ class ModuleFS : public JsObjecT<ModuleFS> {
     // object factory
 
     NCJS_BEGIN_OBJECT_FACTORY()
+        // objects
+        NCJS_MAP_OBJECT_FACTORY("StatWatcher", StatWatcher)
+
+        // functions
         NCJS_MAP_OBJECT_FUNCTION("FSInitialize", FSInitialize)
 
         NCJS_MAP_OBJECT_FUNCTION("internalModuleReadFile", InternalModuleReadFile)
