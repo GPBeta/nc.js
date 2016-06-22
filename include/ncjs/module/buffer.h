@@ -93,6 +93,8 @@ private:
     char* m_buffer;
     size_t m_size;
 
+    static const CefRefPtr<Buffer> EMPTY_BUFFER;
+
     IMPLEMENT_REFCOUNTING(Buffer);
 };
 

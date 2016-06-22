@@ -52,6 +52,8 @@ static const unsigned int MAX_LENGTH =
 
 static const int STRING_MAX_LENGTH = (1 << 28) - 16;
 
+const CefRefPtr<Buffer> Buffer::EMPTY_BUFFER = new Buffer(0, 0);
+
 /// ============================================================================
 /// implementation
 /// ============================================================================
@@ -529,6 +531,9 @@ inline void Buffer::Wrap(Buffer* buffer, CefRefPtr<CefV8Value>& value)
 
 inline Buffer* Buffer::Create(CefRefPtr<Environment> env, size_t size)
 {
+    if (size == 0)
+        return EMPTY_BUFFER;
+
     Environment::BufferObjectInfo& info = env->GetBufferObjectInfo();
 
     void* buffer = info.NoZeroFill() ? malloc(size) : calloc(size, 1);
@@ -539,6 +544,9 @@ inline Buffer* Buffer::Create(CefRefPtr<Environment> env, size_t size)
 
 inline Buffer* Buffer::Create(size_t size)
 {
+    if (size == 0)
+        return EMPTY_BUFFER;
+
     void* buffer = static_cast<char*>(malloc(size));
     return buffer ? new Buffer(static_cast<char*>(buffer), size) : NULL;
 }
@@ -558,7 +566,7 @@ inline Buffer* Buffer::Create(const CefString& str, int encoding)
         default: break;
     }
 
-    return buffer ? new Buffer(buffer, size) : NULL;
+    return buffer ? new Buffer(buffer, size) : EMPTY_BUFFER;
 }
 
 /// ----------------------------------------------------------------------------
