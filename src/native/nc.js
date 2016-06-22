@@ -214,7 +214,8 @@
             return result;
         }
 
-        var contextify = { ContextifyScript : contextifyScript };
+        var contextify = { ContextifyScript : contextifyScript,
+                           runInDebugContext : function(code) { return null; } };
 
         // add to binding cache
         process.binding._cache.contextify = contextify;

@@ -1,9 +1,24 @@
+// MODIFIED: binding.isXXX() js side implementations
 'use strict';
 
 const uv = process.binding('uv');
 const Buffer = require('buffer').Buffer;
 const internalUtil = require('internal/util');
 const binding = process.binding('util');
+// NCJS: binding.isXXX() replacements
+binding.isArrayBuffer = function(v) { return v instanceof ArrayBuffer; };
+binding.isDataView    = function(v) { return v instanceof DataView; };
+binding.isDate        = function(v) { return v instanceof Date; };
+binding.isMap         = function(v) { return v instanceof Map; };
+binding.isPromise     = function(v) { return v instanceof Promise; };
+binding.isRegExp      = function(v) { return v instanceof RegExp; };
+binding.isSet         = function(v) { return v instanceof Set; };
+binding.isMapIterator = function(v) {
+  return Object.prototype.toString.call(v) === '[object Map Iterator]';
+};
+binding.isSetIterator = function(v) {
+  return Object.prototype.toString.call(v) === '[object Set Iterator]';
+};
 
 const isError = internalUtil.isError;
 
