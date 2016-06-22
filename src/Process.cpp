@@ -16,7 +16,7 @@
 
 #define NANOS_PER_SEC 1000000000
 
-#define UV_ERROR(_ERR, _CALL) Environment::UvException(_ERR, _CALL, NULL, except)
+#define UV_ERROR(_ERR, _CALL) Environment::UvException(_ERR, _CALL, except)
 
 #define TYPE_ERROR(_MSG) Environment::TypeException(NCJS_TEXT(_MSG), except)
 

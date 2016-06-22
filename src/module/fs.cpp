@@ -14,15 +14,18 @@
 
 #define _WINSOCKAPI_    // stops windows.h including winsock.h
 
-#define ASYNC_CALL(_FUNCTION, _REQ, ...) \
+#define ASYNC_DEST_CALL(_FUNCTION, _REQ, _DEST, ...) \
     except = consts::str_err_notimpl; return;
+
+#define ASYNC_CALL(_FUNCTION, _REQ, ...) \
+    ASYNC_DEST_CALL(_FUNCTION, _REQ, NULL, __VA_ARGS__)
 
 #define SYNC_DEST_CALL(_FUNCTION, _PATH, _DEST, ...) \
     SyncReqWrap req_wrap; \
     int err = uv_fs_##_FUNCTION(Environment::GetEventLoop(), \
                                &req_wrap.req, __VA_ARGS__, NULL); \
     if (err < 0) \
-        return Environment::UvException(err, #_FUNCTION, NULL, except);
+        return Environment::UvException(err, #_FUNCTION, NULL, _PATH, _DEST, except);
 
 #define SYNC_CALL(_FUNCTION, _PATH, ...) \
     SYNC_DEST_CALL(_FUNCTION, _PATH, NULL, __VA_ARGS__)

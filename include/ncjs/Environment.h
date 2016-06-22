@@ -130,9 +130,14 @@ public:
     {
         except.FromString(msg, N, false);
     }
+    
+    static void UvException(int err, const char* syscall, CefString& except)
+    {
+        UvException(err, syscall, NULL, NULL, NULL, except);
+    }
 
-    static void UvException(int err, const char* syscall,
-                            const char* msg, CefString& except);
+    static void UvException(int err, const char* syscall, const char* msg,
+                            const char* path, const char* dest, CefString& except);
 
     static Environment* Get(CefRefPtr<CefV8Context> context)
     {

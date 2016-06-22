@@ -456,11 +456,12 @@ void Environment::ErrorException(int err, const char* syscall, const char* msg, 
     except = format.str();
 }
 
-void Environment::UvException(int err, const char* syscall, const char* msg, CefString& except)
+void Environment::UvException(int err, const char* syscall, const char* msg,
+                              const char* path, const char* dest, CefString& except)
 {
-    std::ostringstream format(uv_err_name(err));
+    std::ostringstream format;
 
-    format << ": ";
+    format << uv_err_name(err) << ": ";
 
     if (msg && *msg)
         format << msg;
@@ -468,6 +469,12 @@ void Environment::UvException(int err, const char* syscall, const char* msg, Cef
         format << uv_strerror(err);
 
     format << ", " << syscall;
+
+    if (path)
+        format << " '" << path << '\'';
+
+    if (dest)
+        format << " -> '" << dest << '\'';
 
     except = format.str();
 }

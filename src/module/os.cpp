@@ -214,7 +214,7 @@ class ModuleOS : public JsObjecT<ModuleOS> {
 			retval = ret;
 			return;
 		} else if (err) {
-            return Environment::UvException(err, "uv_interface_addresses", NULL, except);
+            return Environment::UvException(err, "uv_interface_addresses", except);
 		}
 
         CefRefPtr<CefV8Value> STR_IPV4 = CefV8Value::CreateString(consts::str_IPv4);
@@ -290,7 +290,7 @@ class ModuleOS : public JsObjecT<ModuleOS> {
 		const int err = uv_os_homedir(buf, &len);
 
 		if (err)
-			return Environment::UvException(err, "uv_os_homedir", NULL, except);
+			return Environment::UvException(err, "uv_os_homedir", except);
 
 		retval = CefV8Value::CreateString(buf);
     }
