@@ -931,7 +931,7 @@ class ModuleBuffer : public JsObjecT<ModuleBuffer> {
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
         NCJS_ASSERT(args.size() >= 3);
-        NCJS_ASSERT(args[2]->IsIntValue());
+        NCJS_ASSERT(args[2]->IsInt());
 
         Encoding enc = UTF8;
         if (args.size() > 3)
@@ -953,8 +953,8 @@ class ModuleBuffer : public JsObjecT<ModuleBuffer> {
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
         NCJS_ASSERT(args.size() >= 3);
-        NCJS_ASSERT(args[1]->IsUIntValue());
-        NCJS_ASSERT(args[2]->IsIntValue());
+        NCJS_ASSERT(args[1]->IsUInt());
+        NCJS_ASSERT(args[2]->IsInt());
 
         Buffer* buf = Buffer::Get(args[0]);
 
@@ -980,8 +980,8 @@ class ModuleBuffer : public JsObjecT<ModuleBuffer> {
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
         NCJS_ASSERT(args.size() >= 3);
-        NCJS_ASSERT(args[1]->IsStringValue());
-        NCJS_ASSERT(args[2]->IsIntValue());
+        NCJS_ASSERT(args[1]->IsString());
+        NCJS_ASSERT(args[2]->IsInt());
 
         Encoding enc = UTF8;
         if (args.size() > 3)

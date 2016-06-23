@@ -46,7 +46,7 @@ template <typename T>
 class Vector {
  public:
   Vector(T* data, size_t length) : start_(data), length_(length) {
-    NCJS_ASSERT(length > 0 && data != nullptr);
+    NCJS_ASSERT(length > 0 && data != NULL);
   }
 
   // Returns the length of the vector.
