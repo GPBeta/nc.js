@@ -78,7 +78,7 @@ public:
     static Buffer* Create(CefRefPtr<Environment> env, size_t size);
     static Buffer* Create(size_t size); // despise buffer object flags
     static Buffer* Create(const CefString& str, int encoding);
-
+    static Buffer* Create(const CefString& str, const CefString& encoding);
 private:
 
     Buffer(char* buffer, size_t size, const Buffer* owner = NULL) :

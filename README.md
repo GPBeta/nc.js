@@ -20,6 +20,7 @@ It's based on the stable CEF dll-wrapper API, therefore Node-CEF should be compa
 
 - [Buffer](https://nodejs.org/dist/latest-v4.x/docs/api/buffer.html)
 - [Events](https://nodejs.org/dist/latest-v4.x/docs/api/events.html)
+- [File System](https://nodejs.org/dist/latest-v4.x/docs/api/fs.html) (Synchronous)
 - [Globals](https://nodejs.org/dist/latest-v4.x/docs/api/globals.html)
 - [Modules](https://nodejs.org/dist/latest-v4.x/docs/api/modules.html)
 - [OS](https://nodejs.org/dist/latest-v4.x/docs/api/os.html)
@@ -41,7 +42,7 @@ Any remote accesses to the `ncjs` module are forbidden, currently only `file://`
 ### What's next:
 
 - [Child Process](https://nodejs.org/dist/latest-v4.x/docs/api/child_process.html)
-- [File System](https://nodejs.org/dist/latest-v4.x/docs/api/fs.html)
+- [File System](https://nodejs.org/dist/latest-v4.x/docs/api/fs.html) (Asynchronous)
 - [Stream](https://nodejs.org/dist/latest-v4.x/docs/api/stream.html)
 - Supports for remote modules (Sync/Async).
 

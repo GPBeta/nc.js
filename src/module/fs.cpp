@@ -34,8 +34,57 @@
 
 #define SYNC_RESULT err
 
-#define  TYPE_ERROR(_MSG) Environment::TypeException(NCJS_TEXT(_MSG), except)
-#define RANGE_ERROR(_MSG) Environment::RangeException(NCJS_TEXT(_MSG), except)
+#define    TYPE_ERROR(_MSG) Environment::TypeException(NCJS_TEXT(_MSG), except)
+#define   RANGE_ERROR(_MSG) Environment::RangeException(NCJS_TEXT(_MSG), except)
+#define UNKNOWN_ERROR(_MSG) Environment::ErrorException(NCJS_TEXT(_MSG), except)
+
+#define GET_OFFSET(_VAL) ((_VAL)->IsInt() ? (_VAL)->GetIntValue() : -1)
+
+#define GET_PARAM_FD(_ARGS, _FD) \
+    if (_ARGS.size() < 1) \
+        return TYPE_ERROR("fd is required"); \
+    if (!_ARGS[0]->IsInt()) \
+        return TYPE_ERROR("fd must be a file descriptor"); \
+    const int _FD = _ARGS[0]->GetIntValue()
+
+#define GET_PARAM_FD_INT(_ARGS, _FD, _VAR) \
+    if (_ARGS.size() < 2) \
+        return TYPE_ERROR("fd and " NCJS_TEXT(#_VAR) NCJS_TEXT(" are required")); \
+    if (!_ARGS[0]->IsInt()) \
+        return TYPE_ERROR("fd must be a file descriptor"); \
+    if (!_ARGS[1]->IsInt()) \
+        return TYPE_ERROR(#_VAR NCJS_TEXT(" must be an integer")); \
+    const int _FD = args[0]->GetIntValue(); \
+    const int _VAR = args[1]->GetIntValue()
+
+#define GET_PARAM_PATH(_ARGS, _PATH) \
+    if (_ARGS.size() < 1) \
+        return TYPE_ERROR("path required"); \
+    if (!_ARGS[0]->IsString()) \
+        return TYPE_ERROR("path must be a string"); \
+    const std::string _PATH(_ARGS[0]->GetStringValue().ToString())
+
+#define GET_PARAM_PATH_MODE(_ARGS, _PATH, _MODE) \
+    if (_ARGS.size() < 2) \
+        return TYPE_ERROR("path and mode are required"); \
+    if (!_ARGS[0]->IsString()) \
+        return TYPE_ERROR("path must be a string"); \
+    if (!_ARGS[1]->IsInt()) \
+        return TYPE_ERROR("mode must be an integer"); \
+    const std::string _PATH(_ARGS[0]->GetStringValue().ToString()); \
+    const int _MODE = _ARGS[1]->GetIntValue()
+
+#define GET_PARAM_SRC_DST(_ARGS, _SRC, _DST) \
+    if (_ARGS.size() < 1) \
+        return TYPE_ERROR("dst path required"); \
+    if (_ARGS.size() < 2) \
+        return TYPE_ERROR("src path required"); \
+    if (!_ARGS[0]->IsString()) \
+        return TYPE_ERROR("dst path must be a string"); \
+    if (!_ARGS[1]->IsString()) \
+        return TYPE_ERROR("src path must be a string"); \
+    const std::string _SRC(_ARGS[0]->GetStringValue().ToString()); \
+    const std::string _DST(_ARGS[1]->GetStringValue().ToString())
 
 /// ----------------------------------------------------------------------------
 /// headers
@@ -244,81 +293,66 @@ class ModuleFS : public JsObjecT<ModuleFS> {
         retval = CefV8Value::CreateInt(rc);
     }
 
-    // fs.stat()
-    NCJS_OBJECT_FUNCTION(Stat)(CefRefPtr<CefV8Value> object,
-        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except) {
-        CefRefPtr<Environment> env = Environment::Get(CefV8Context::GetCurrentContext());
+    // fs.access()
+    NCJS_OBJECT_FUNCTION(Access)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        GET_PARAM_PATH_MODE(args, path, mode);
 
-        if (args.size() < 1)
+        if (NCJS_ARG_IS(Object, args, 2)) {
+            ASYNC_CALL(access, args[2], path.c_str(), mode);
+        } else {
+            SYNC_CALL(access, path.c_str(), path.c_str(), mode);
+        }
+    }
+
+    // fs.close()
+    NCJS_OBJECT_FUNCTION(Close)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        GET_PARAM_FD(args, fd);
+
+        if (NCJS_ARG_IS(Object, args, 1)) {
+            ASYNC_CALL(close, args[1], fd)
+        } else {
+            SYNC_CALL(close, 0, fd)
+        }
+    }
+
+    // fs.open()
+    NCJS_OBJECT_FUNCTION(Open)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        const size_t size = args.size();
+        if (size < 1)
             return TYPE_ERROR("path required");
+        if (size < 2)
+            return TYPE_ERROR("flags required");
+        if (size < 3)
+            return TYPE_ERROR("mode required");
         if (!args[0]->IsString())
             return TYPE_ERROR("path must be a string");
+        if (!args[1]->IsInt())
+            return TYPE_ERROR("flags must be an int");
+        if (!args[2]->IsInt())
+            return TYPE_ERROR("mode must be an int");
 
         const std::string path(args[0]->GetStringValue().ToString());
+        const int flags = args[1]->GetIntValue();
+        const int mode = args[2]->GetIntValue();
 
-        if (NCJS_ARG_IS(Object, args, 1)) {
-            ASYNC_CALL(stat, args[1], path.c_str())
+        if (NCJS_ARG_IS(Object, args, 3)) {
+            ASYNC_CALL(open, args[3], path.c_str(), flags, mode)
         } else {
-            SYNC_CALL(stat, path.c_str(), path.c_str())
-            retval = BuildStatsObject(env, static_cast<const uv_stat_t*>(SYNC_REQ.ptr));
+            SYNC_CALL(open, path.c_str(), path.c_str(), flags, mode)
+            retval = CefV8Value::CreateInt(SYNC_RESULT);
         }
     }
 
-    // fs.lstat()
-    NCJS_OBJECT_FUNCTION(LStat)(CefRefPtr<CefV8Value> object,
-        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except) {
-        CefRefPtr<Environment> env = Environment::Get(CefV8Context::GetCurrentContext());
-
-        if (args.size() < 1)
-            return TYPE_ERROR("path required");
-        if (!args[0]->IsString())
-            return TYPE_ERROR("path must be a string");
-
-        const std::string path(args[0]->GetStringValue().ToString());
-
-        if (NCJS_ARG_IS(Object, args, 1)) {
-             ASYNC_CALL(lstat, args[1], path)
-        } else {
-             SYNC_CALL(lstat, path.c_str(), path.c_str())
-             retval = BuildStatsObject(env, static_cast<const uv_stat_t*>(SYNC_REQ.ptr));
-        }
-    }
-
-    // fs.fstat()
-    NCJS_OBJECT_FUNCTION(FStat)(CefRefPtr<CefV8Value> object,
-        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except) {
-        CefRefPtr<Environment> env = Environment::Get(CefV8Context::GetCurrentContext());
-
-        if (args.size() < 1)
-            return TYPE_ERROR("fd is required");
-        if (!args[0]->IsInt())
-            return TYPE_ERROR("fd must be a file descriptor");
-
-        int fd = args[0]->GetIntValue();
-
-        if (NCJS_ARG_IS(Object, args, 1)) {
-            ASYNC_CALL(fstat, args[1], fd)
-        } else {
-            SYNC_CALL(fstat, 0, fd)
-            retval = BuildStatsObject(env, static_cast<const uv_stat_t*>(SYNC_REQ.ptr));
-        }
-    }
-
-
-    /*
-     * Wrapper for read(2).
-     *
-     * bytesRead = fs.read(fd, buffer, offset, length, position)
-     *
-     * 0 fd        integer. file descriptor
-     * 1 buffer    instance of Buffer
-     * 2 offset    integer. offset to start reading into inside buffer
-     * 3 length    integer. length to read
-     * 4 position  file position - null for current position
-     *
-     */
+    // fs.read()
     NCJS_OBJECT_FUNCTION(Read)(CefRefPtr<CefV8Value> object,
-        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except) {
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
         Buffer* buffer = NULL;
 
         if (args.size() < 2)
@@ -328,7 +362,7 @@ class ModuleFS : public JsObjecT<ModuleFS> {
         if (!(buffer = Buffer::Get(args[1])))
             return TYPE_ERROR("Second argument needs to be a buffer");
 
-        int fd = args[0]->GetIntValue();
+        const int fd = args[0]->GetIntValue();
 
         int64_t pos = -1;
         unsigned len = 0;
@@ -361,51 +395,472 @@ class ModuleFS : public JsObjecT<ModuleFS> {
         }
     }
 
-    // fs.open()
-    NCJS_OBJECT_FUNCTION(Open)(CefRefPtr<CefV8Value> object,
-        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except) {
+    // fs.fdatasync()
+    NCJS_OBJECT_FUNCTION(FDataSync)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        GET_PARAM_FD(args, fd);
 
-        size_t len = args.size();
-        if (len < 1)
-            return TYPE_ERROR("path required");
-        if (len < 2)
-            return TYPE_ERROR("flags required");
-        if (len < 3)
-            return TYPE_ERROR("mode required");
-        if (!args[0]->IsString())
-            return TYPE_ERROR("path must be a string");
-        if (!args[1]->IsInt())
-            return TYPE_ERROR("flags must be an int");
-        if (!args[2]->IsInt())
-            return TYPE_ERROR("mode must be an int");
+        if (NCJS_ARG_IS(Object, args, 1)) {
+            ASYNC_CALL(fdatasync, args[1], fd)
+        } else {
+            SYNC_CALL(fdatasync, 0, fd)
+        }
+    }
 
-        const std::string path(args[0]->GetStringValue().ToString());
-        int flags = args[1]->GetIntValue();
-        int mode = args[2]->GetIntValue();
+    // fs.fsync()
+    NCJS_OBJECT_FUNCTION(FSync)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        GET_PARAM_FD(args, fd);
+
+        if (NCJS_ARG_IS(Object, args, 1)) {
+            ASYNC_CALL(fsync, args[1], fd)
+        } else {
+            SYNC_CALL(fsync, 0, fd)
+        }
+    }
+
+    // fs.ftruncate()
+    NCJS_OBJECT_FUNCTION(FTruncate)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        GET_PARAM_FD_INT(args, fd, length);
+
+        if (NCJS_ARG_IS(Object, args, 2)) {
+            ASYNC_CALL(ftruncate, args[2], fd, length)
+        } else {
+            SYNC_CALL(ftruncate, 0, fd, length)
+        }
+    }
+
+    // fs.rename()
+    NCJS_OBJECT_FUNCTION(Rename)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        GET_PARAM_SRC_DST(args, strOld, strNew);
+
+        const char* pathOld = strOld.c_str();
+        const char* pathNew = strNew.c_str();
+
+        if (NCJS_ARG_IS(Object, args, 2)) {
+            ASYNC_DEST_CALL(rename, args[2], pathNew, pathOld, pathNew)
+        } else {
+            SYNC_DEST_CALL(rename, pathOld, pathNew, pathOld, pathNew)
+        }
+    }
+
+    // fs.rmdir()
+    NCJS_OBJECT_FUNCTION(RMDir)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        GET_PARAM_PATH(args, path);
+
+        if (NCJS_ARG_IS(Object, args, 1)) {
+            ASYNC_CALL(rmdir, args[1], path.c_str())
+        } else {
+            SYNC_CALL(rmdir, path.c_str(), path.c_str())
+        }
+    }
+
+    // fs.mkdir()
+    NCJS_OBJECT_FUNCTION(MKDir)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        GET_PARAM_PATH_MODE(args, path, mode);
+
+        if (NCJS_ARG_IS(Object, args, 2)) {
+            ASYNC_CALL(mkdir, args[2], path.c_str(), mode)
+        } else {
+            SYNC_CALL(mkdir, path.c_str(), path.c_str(), mode)
+        }
+    }
+
+    // fs.readdir()
+    NCJS_OBJECT_FUNCTION(ReadDir)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        GET_PARAM_PATH(args, path);
+
+        if (NCJS_ARG_IS(Object, args, 1)) {
+            ASYNC_CALL(scandir, args[1], path.c_str(), 0)
+        } else {
+            SYNC_CALL(scandir, path.c_str(), path.c_str(), 0)
+
+            NCJS_CHK_GE(SYNC_REQ.result, 0);
+
+            CefRefPtr<CefV8Value> names = CefV8Value::CreateArray(0);
+
+            for (unsigned i = 0; ; ++i) {
+                uv_dirent_t ent;
+                const int res = uv_fs_scandir_next(&SYNC_REQ, &ent);
+
+                if (res == UV_EOF)
+                    break;
+                if (res)
+                    return Environment::UvException(res, "readdir", NULL,
+                                                    path.c_str(), NULL, except);
+
+                names->SetValue(i, CefV8Value::CreateString(ent.name));               
+            }
+
+            retval = names;
+        }
+    }
+
+    // fs.stat()
+    NCJS_OBJECT_FUNCTION(Stat)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        GET_PARAM_PATH(args, path);
+
+        CefRefPtr<Environment> env = Environment::Get(CefV8Context::GetCurrentContext());
+
+        if (NCJS_ARG_IS(Object, args, 1)) {
+            ASYNC_CALL(stat, args[1], path.c_str())
+        } else {
+            SYNC_CALL(stat, path.c_str(), path.c_str())
+            retval = BuildStatsObject(env, static_cast<const uv_stat_t*>(SYNC_REQ.ptr));
+        }
+    }
+
+    // fs.lstat()
+    NCJS_OBJECT_FUNCTION(LStat)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        GET_PARAM_PATH(args, path);
+
+        CefRefPtr<Environment> env = Environment::Get(CefV8Context::GetCurrentContext());
+
+        if (NCJS_ARG_IS(Object, args, 1)) {
+             ASYNC_CALL(lstat, args[1], path)
+        } else {
+             SYNC_CALL(lstat, path.c_str(), path.c_str())
+             retval = BuildStatsObject(env, static_cast<const uv_stat_t*>(SYNC_REQ.ptr));
+        }
+    }
+
+    // fs.fstat()
+    NCJS_OBJECT_FUNCTION(FStat)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        GET_PARAM_FD(args, fd);
+
+        CefRefPtr<Environment> env = Environment::Get(CefV8Context::GetCurrentContext());
+
+        if (NCJS_ARG_IS(Object, args, 1)) {
+            ASYNC_CALL(fstat, args[1], fd)
+        } else {
+            SYNC_CALL(fstat, 0, fd)
+            retval = BuildStatsObject(env, static_cast<const uv_stat_t*>(SYNC_REQ.ptr));
+        }
+    }
+
+    // fs.link()
+    NCJS_OBJECT_FUNCTION(Link)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        GET_PARAM_SRC_DST(args, strSrc, strDst);
+
+        const char* pathSrc = strSrc.c_str();
+        const char* pathDst = strDst.c_str();
+
+        if (NCJS_ARG_IS(Object, args, 2)) {
+            ASYNC_DEST_CALL(link, args[2], pathDst, pathSrc, pathDst)
+        } else {
+            SYNC_DEST_CALL(link, pathSrc, pathDst, pathSrc, pathDst)
+        }
+    }
+
+    // fs.symlink()
+    NCJS_OBJECT_FUNCTION(SymLink)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        GET_PARAM_SRC_DST(args, strSrc, strDst);
+
+        int flags = 0;
+        if (NCJS_ARG_IS(Object, args, 2)) {
+            const CefString mode = args[2]->GetStringValue();
+            if (mode == consts::str_dir)
+                flags |= UV_FS_SYMLINK_DIR;
+            else if (mode == consts::str_junction)
+                flags |= UV_FS_SYMLINK_JUNCTION;
+            else if (mode != consts::str_file)
+                return UNKNOWN_ERROR("Unknown symlink type");
+        }
+
+        const char* target = strSrc.c_str();
+        const char* path = strDst.c_str();
 
         if (NCJS_ARG_IS(Object, args, 3)) {
-            ASYNC_CALL(open, args[3], path.c_str(), flags, mode)
+            ASYNC_DEST_CALL(symlink, args[3], path, target, path, flags)
         } else {
-            SYNC_CALL(open, path.c_str(), path.c_str(), flags, mode)
+            SYNC_DEST_CALL(symlink, target, path, target, path, flags)
+        }
+    }
+
+    // fs.readlink()
+    NCJS_OBJECT_FUNCTION(ReadLink)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        GET_PARAM_PATH(args, path);
+
+        if (NCJS_ARG_IS(Object, args, 1)) {
+            ASYNC_CALL(readlink, args[1], path.c_str())
+        } else {
+            SYNC_CALL(readlink, path.c_str(), path.c_str())
+
+            retval = CefV8Value::CreateString(static_cast<const char*>(SYNC_REQ.ptr));
+        }
+    }
+
+    // fs.unlink()
+    NCJS_OBJECT_FUNCTION(Unlink)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        GET_PARAM_PATH(args, path);
+
+        if (NCJS_ARG_IS(Object, args, 1)) {
+            ASYNC_CALL(unlink, args[1], path.c_str())
+        } else {
+            SYNC_CALL(unlink, path.c_str(), path.c_str())
+        }
+    }
+
+    // fs.chmod()
+    NCJS_OBJECT_FUNCTION(Chmod)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        GET_PARAM_PATH_MODE(args, path, mode);
+
+        if (NCJS_ARG_IS(Object, args, 2)) {
+            ASYNC_CALL(chmod, args[2], path.c_str(), mode);
+        } else {
+            SYNC_CALL(chmod, path.c_str(), path.c_str(), mode);
+        }
+    }
+
+    // fs.fchmod()
+    NCJS_OBJECT_FUNCTION(FChmod)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        GET_PARAM_FD_INT(args, fd, mode);
+
+        if (NCJS_ARG_IS(Object, args, 2)) {
+            ASYNC_CALL(fchmod, args[2], fd, mode);
+        } else {
+            SYNC_CALL(fchmod, 0, fd, mode);
+        }
+    }
+
+    // fs.chown()
+    NCJS_OBJECT_FUNCTION(Chown)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        const size_t size = args.size();
+        if (size < 1)
+            return TYPE_ERROR("path required");
+        if (size < 2)
+            return TYPE_ERROR("uid required");
+        if (size < 3)
+            return TYPE_ERROR("gid required");
+        if (!args[0]->IsString())
+            return TYPE_ERROR("path must be a string");
+        if (!args[1]->IsUInt())
+            return TYPE_ERROR("uid must be an unsigned int");
+        if (!args[2]->IsUInt())
+            return TYPE_ERROR("gid must be an unsigned int");
+
+        const std::string path(args[0]->GetStringValue().ToString());
+        const uv_uid_t uid = args[1]->GetUIntValue();
+        const uv_gid_t gid = args[2]->GetUIntValue();
+
+        if (NCJS_ARG_IS(Object, args, 3)) {
+            ASYNC_CALL(chown, args[3], path, uid, gid);
+        } else {
+            SYNC_CALL(chown, path.c_str(), path.c_str(), uid, gid);
+        }
+    }
+
+    // fs.fchown()
+    NCJS_OBJECT_FUNCTION(FChown)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        const size_t size = args.size();
+        if (size < 1)
+            return TYPE_ERROR("fd required");
+        if (size < 2)
+            return TYPE_ERROR("uid required");
+        if (size < 3)
+            return TYPE_ERROR("gid required");
+        if (!args[0]->IsInt())
+            return TYPE_ERROR("fd must be a file descriptor");
+        if (!args[1]->IsUInt())
+            return TYPE_ERROR("uid must be an unsigned int");
+        if (!args[2]->IsUInt())
+            return TYPE_ERROR("gid must be an unsigned int");
+
+        const int fd = args[0]->GetIntValue();
+        const uv_uid_t uid = args[1]->GetUIntValue();
+        const uv_gid_t gid = args[2]->GetUIntValue();
+
+        if (NCJS_ARG_IS(Object, args, 3)) {
+            ASYNC_CALL(fchown, args[3], fd, uid, gid);
+        } else {
+            SYNC_CALL(fchown, 0, fd, uid, gid);
+        }
+    }
+
+    // fs.utimes()
+    NCJS_OBJECT_FUNCTION(UTimes)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        const size_t size = args.size();
+        if (size < 1)
+            return TYPE_ERROR("path required");
+        if (size < 2)
+            return TYPE_ERROR("atime required");
+        if (size < 3)
+            return TYPE_ERROR("mtime required");
+        if (!args[0]->IsString())
+            return TYPE_ERROR("path must be a string");
+        if (!args[1]->IsDouble())
+            return TYPE_ERROR("atime must be a number");
+        if (!args[2]->IsDouble())
+            return TYPE_ERROR("mtime must be a number");
+
+        const std::string path(args[0]->GetStringValue().ToString());
+        const double atime = args[1]->GetDoubleValue();
+        const double mtime = args[2]->GetDoubleValue();
+
+        if (NCJS_ARG_IS(Object, args, 3)) {
+            ASYNC_CALL(utime, args[3], path, atime, mtime);
+        } else {
+            SYNC_CALL(utime, path.c_str(), path.c_str(), atime, mtime);
+        }
+    }
+
+    // fs.futimes()
+    NCJS_OBJECT_FUNCTION(FUTimes)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        const size_t size = args.size();
+        if (size < 1)
+            return TYPE_ERROR("fd required");
+        if (size < 2)
+            return TYPE_ERROR("atime required");
+        if (size < 3)
+            return TYPE_ERROR("mtime required");
+        if (!args[0]->IsString())
+            return TYPE_ERROR("fd must be a file descriptor");
+        if (!args[1]->IsDouble())
+            return TYPE_ERROR("atime must be a number");
+        if (!args[2]->IsDouble())
+            return TYPE_ERROR("mtime must be a number");
+
+        const int fd = args[0]->GetIntValue();
+        const double atime = args[1]->GetDoubleValue();
+        const double mtime = args[2]->GetDoubleValue();
+
+        if (NCJS_ARG_IS(Object, args, 3)) {
+            ASYNC_CALL(futime, args[3], fd, atime, mtime);
+        } else {
+            SYNC_CALL(futime, 0, fd, atime, mtime);
+        }
+    }
+
+    // fs.writeBuffer()
+    NCJS_OBJECT_FUNCTION(WriteBuffer)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        const size_t size = args.size(); NCJS_CHK_GE(size, 2);
+
+        if (!args[0]->IsInt())
+            return TYPE_ERROR("first argument must be file descriptor");
+
+        const int fd = args[0]->GetIntValue();
+        const unsigned off = size > 2 ? args[2]->GetUIntValue() : 0;
+        const unsigned len = size > 3 ? args[3]->GetUIntValue() : 0;
+        const int64_t pos = size > 4 ? GET_OFFSET(args[4]) : -1;
+
+        Buffer* buf = Buffer::Get(args[1]); NCJS_CHECK(buf);
+
+        if (off > buf->Size())
+            return RANGE_ERROR("offset out of bounds");
+        if (len > buf->Size())
+            return RANGE_ERROR("length out of bounds");
+        if (off + len < off)
+            return RANGE_ERROR("off + len overflow");
+        if (!Buffer::IsWithinBounds(off, len, buf->Size()))
+            return RANGE_ERROR("off + len > buffer.length");
+
+        const uv_buf_t uvbuf = uv_buf_init(buf->Data() + off, len);
+
+        if (NCJS_ARG_IS(Object, args, 5)) {
+            ASYNC_CALL(write, args[5], fd, &uvbuf, 1, pos)
+        } else {
+            SYNC_CALL(write, NULL, fd, &uvbuf, 1, pos)
+
             retval = CefV8Value::CreateInt(SYNC_RESULT);
         }
     }
 
-    // fs.close()
-    NCJS_OBJECT_FUNCTION(Close)(CefRefPtr<CefV8Value> object,
-        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except) {
+    // fs.writeBuffers()
+    NCJS_OBJECT_FUNCTION(WriteBuffers)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        const size_t size = args.size();
 
-        if (args.size() < 1)
-            return TYPE_ERROR("fd is required");
-        if (!args[0]->IsInt())
-            return TYPE_ERROR("fd must be a file descriptor");
+        NCJS_CHK_GE(size, 2);
+        NCJS_CHECK(args[0]->IsInt());
+        NCJS_CHECK(args[1]->IsArray());
 
-        int fd = args[0]->GetIntValue();
+        const int fd = args[0]->GetIntValue();
+        const int64_t pos = size > 2 ? GET_OFFSET(args[2]) : -1;
 
-        if (NCJS_ARG_IS(Object, args, 1)) {
-            ASYNC_CALL(close, args[1], fd)
+        CefRefPtr<CefV8Value> chunks = args[1];
+        const unsigned nChunk = chunks->GetArrayLength();
+        std::vector<uv_buf_t> bufs(nChunk);
+
+        for (unsigned i = 0; i < nChunk; ++i) {
+            if (Buffer* buf = Buffer::Get(chunks->GetValue(i))) {
+                bufs[i] = uv_buf_init(buf->Data(), unsigned(buf->Size()));
+            } else { return TYPE_ERROR("array elements all need to be buffers"); }
+        }
+
+        if (NCJS_ARG_IS(Object, args, 3)) {
+            ASYNC_CALL(write, args[3], fd, &bufs[0], nChunk, pos)
         } else {
-            SYNC_CALL(close, 0, fd)
+            SYNC_CALL(write, NULL, fd, &bufs[0], nChunk, pos)
+
+            retval = CefV8Value::CreateInt(SYNC_RESULT);
+        }
+    }
+
+    // fs.writeString()
+    NCJS_OBJECT_FUNCTION(WriteString)(CefRefPtr<CefV8Value> object,
+        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
+    {
+        const size_t size = args.size(); NCJS_CHK_GE(size, 2);
+
+        if (!args[0]->IsInt())
+            return TYPE_ERROR("first argument must be file descriptor");
+
+        const int fd = args[0]->GetIntValue();
+        const CefString str = args[1]->GetStringValue();
+        const int64_t   pos = size > 2 ? GET_OFFSET(args[2]) : -1;
+        const CefString enc = size > 3 ? args[3]->GetStringValue() : CefString();
+
+        CefRefPtr<Buffer> buf = Buffer::Create(str, enc); NCJS_CHECK(buf);
+
+        const uv_buf_t uvbuf = uv_buf_init(buf->Data(), unsigned(buf->Size()));
+
+        if (NCJS_ARG_IS(Object, args, 4)) {
+            ASYNC_CALL(write, args[4], fd, &uvbuf, 1, pos)
+        } else {
+            SYNC_CALL(write, NULL, fd, &uvbuf, 1, pos)
+
+            retval = CefV8Value::CreateInt(SYNC_RESULT);
         }
     }
 
@@ -430,13 +885,34 @@ class ModuleFS : public JsObjecT<ModuleFS> {
         NCJS_MAP_OBJECT_FUNCTION("FSInitialize", FSInitialize)
 
         NCJS_MAP_OBJECT_FUNCTION("internalModuleReadFile", InternalModuleReadFile)
-        NCJS_MAP_OBJECT_FUNCTION("internalModuleStat", InternalModuleStat)
-        NCJS_MAP_OBJECT_FUNCTION("stat", Stat)
-        NCJS_MAP_OBJECT_FUNCTION("lstat", LStat)
-        NCJS_MAP_OBJECT_FUNCTION("fstat", FStat)
-        NCJS_MAP_OBJECT_FUNCTION("read", Read)
-        NCJS_MAP_OBJECT_FUNCTION("open", Open)
-        NCJS_MAP_OBJECT_FUNCTION("close", Close)
+        NCJS_MAP_OBJECT_FUNCTION("internalModuleStat",     InternalModuleStat)
+        NCJS_MAP_OBJECT_FUNCTION("access",       Access)
+        NCJS_MAP_OBJECT_FUNCTION("close",        Close)
+        NCJS_MAP_OBJECT_FUNCTION("open",         Open)
+        NCJS_MAP_OBJECT_FUNCTION("read",         Read)
+        NCJS_MAP_OBJECT_FUNCTION("fdatasync",    FDataSync)
+        NCJS_MAP_OBJECT_FUNCTION("fsync",        FSync)
+        NCJS_MAP_OBJECT_FUNCTION("ftruncate",    FTruncate)
+        NCJS_MAP_OBJECT_FUNCTION("rename",       Rename)
+        NCJS_MAP_OBJECT_FUNCTION("rmdir",        RMDir)
+        NCJS_MAP_OBJECT_FUNCTION("mkdir",        MKDir)
+        NCJS_MAP_OBJECT_FUNCTION("readdir",      ReadDir)
+        NCJS_MAP_OBJECT_FUNCTION("stat",         Stat)
+        NCJS_MAP_OBJECT_FUNCTION("lstat",        LStat)
+        NCJS_MAP_OBJECT_FUNCTION("fstat",        FStat)
+        NCJS_MAP_OBJECT_FUNCTION("link",         Link)
+        NCJS_MAP_OBJECT_FUNCTION("symlink",      SymLink)
+        NCJS_MAP_OBJECT_FUNCTION("readlink",     ReadLink)
+        NCJS_MAP_OBJECT_FUNCTION("unlink",       Unlink)
+        NCJS_MAP_OBJECT_FUNCTION("chmod",        Chmod)
+        NCJS_MAP_OBJECT_FUNCTION("fchmod",       FChmod)
+        NCJS_MAP_OBJECT_FUNCTION("chown",        Chown)
+        NCJS_MAP_OBJECT_FUNCTION("fchown",       FChown)
+        NCJS_MAP_OBJECT_FUNCTION("utimes",       UTimes)
+        NCJS_MAP_OBJECT_FUNCTION("futimes",      FUTimes)
+        NCJS_MAP_OBJECT_FUNCTION("writeBuffer",  WriteBuffer)
+        NCJS_MAP_OBJECT_FUNCTION("writeBuffers", WriteBuffers)
+        NCJS_MAP_OBJECT_FUNCTION("writeString",  WriteString)
     NCJS_END_OBJECT_FACTORY()
 
 };

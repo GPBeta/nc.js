@@ -64,22 +64,24 @@ static inline cef_char_t AsciiLower(cef_char_t c) {
 
 static inline Encoding ParseEncoding(const CefString& str, Encoding def)
 {
-    std_string enc(str.c_str(), str.length());
-    std::transform(enc.begin(), enc.end(), enc.begin(), AsciiLower);
+    if (str.length()) {
+        std_string enc(str.c_str(), str.length());
+        std::transform(enc.begin(), enc.end(), enc.begin(), AsciiLower);
 
-    if      (!enc.compare(NCJS_TEXT("utf8"))      ||
-             !enc.compare(NCJS_TEXT("utf-8")))    return UTF8;
-    else if (!enc.compare(NCJS_TEXT("ascii")))    return ASCII;
-    else if (!enc.compare(NCJS_TEXT("base64")))   return BASE64;
-    else if (!enc.compare(NCJS_TEXT("ucs2"))      ||
-             !enc.compare(NCJS_TEXT("ucs-2"))     ||
-             !enc.compare(NCJS_TEXT("utf16le"))   ||
-             !enc.compare(NCJS_TEXT("utf-16le"))) return UCS2;
-    else if (!enc.compare(NCJS_TEXT("binary"))    ||
-             !enc.compare(NCJS_TEXT("raw"))       ||
-             !enc.compare(NCJS_TEXT("raws")))     return BINARY;
-    else if (!enc.compare(NCJS_TEXT("buffer")))   return BUFFER;
-    else if (!enc.compare(NCJS_TEXT("hex")))      return HEX;
+        if      (!enc.compare(NCJS_TEXT("utf8"))      ||
+                 !enc.compare(NCJS_TEXT("utf-8")))    return UTF8;
+        else if (!enc.compare(NCJS_TEXT("ascii")))    return ASCII;
+        else if (!enc.compare(NCJS_TEXT("base64")))   return BASE64;
+        else if (!enc.compare(NCJS_TEXT("ucs2"))      ||
+                 !enc.compare(NCJS_TEXT("ucs-2"))     ||
+                 !enc.compare(NCJS_TEXT("utf16le"))   ||
+                 !enc.compare(NCJS_TEXT("utf-16le"))) return UCS2;
+        else if (!enc.compare(NCJS_TEXT("binary"))    ||
+                 !enc.compare(NCJS_TEXT("raw"))       ||
+                 !enc.compare(NCJS_TEXT("raws")))     return BINARY;
+        else if (!enc.compare(NCJS_TEXT("buffer")))   return BUFFER;
+        else if (!enc.compare(NCJS_TEXT("hex")))      return HEX;
+    }
 
     return def;
 }
@@ -569,6 +571,11 @@ inline Buffer* Buffer::Create(const CefString& str, int encoding)
     return buffer ? new Buffer(buffer, size) : EMPTY_BUFFER;
 }
 
+Buffer* Buffer::Create(const CefString& str, const CefString& encoding)
+{
+    return Create(str, ParseEncoding(encoding, UTF8));
+}
+
 /// ----------------------------------------------------------------------------
 /// accessors
 /// ----------------------------------------------------------------------------
@@ -830,7 +837,7 @@ class ModuleBuffer : public JsObjecT<ModuleBuffer> {
         const CefString str = args[0]->GetStringValue();
         const CefString enc = args[1]->GetStringValue();
 
-        Buffer::Wrap(Buffer::Create(str, ParseEncoding(enc, UTF8)), retval);
+        Buffer::Wrap(Buffer::Create(str, enc), retval);
     }
 
     // buffer.byteLengthUtf8()
