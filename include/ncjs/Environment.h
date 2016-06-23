@@ -177,10 +177,6 @@ private:
     CefString m_pathPage;
     CefString m_urlFrame;
     
-    // TODO: Store the event loop handler in each Envirnment object
-    // after CEF accepts issue #1908 in feature branches then we
-    // can store the Envirnment object in the V8 function / accessor
-    // as user data without too much overhead when getting it back.
     static uv_loop_t* s_loop;
 
     static const double s_startTime;
