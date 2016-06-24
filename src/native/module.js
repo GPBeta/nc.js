@@ -1,3 +1,4 @@
+// MODIFIED: change searching path for global modules #456
 'use strict';
 
 const NativeModule = require('native_module');
