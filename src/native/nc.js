@@ -168,7 +168,7 @@
             if (this.constructor != contextifyScript)
                 throw Error('Must call vm.Script as a constructor.');
 
-            var filename;
+            var sourceURL;
             if (options !== undefined) {
                 if (typeof options === 'object') {
                     // offsets are not supported
@@ -177,16 +177,23 @@
                     if (options.columnOffset !== undefined && options.columnOffset != 0)
                         throw Error('"columnOffset" must be 0');
                     // 'displayErrors' is ignored
-                    filename = options.filename;
+                    sourceURL = options.filename;
                 } else if (typeof options === 'string') {
-                    filename = options;
+                    sourceURL = options;
                 } else {
                     throw TypeError('options must be an object');
                 }
             }
             this.script = code;
-            if (filename !== undefined)
-                this.script += '\n//@ sourceURL=' + filename;
+            if (sourceURL !== undefined) {
+                if (!NativeModule.exists(sourceURL.slice(0, -3))) { // remove '.js'
+                    sourceURL = sourceURL.replace(/\\/g, '/');
+                    if (sourceURL[0] !== '/')
+                        sourceURL = '/' + sourceURL;
+                    sourceURL = encodeURI('file://' + sourceURL);
+                } // else: native modules, use original filename
+                this.script += '\n//@ sourceURL=' + sourceURL;
+            }
             // else chromium will use vmXX as filename.
         }
 
