@@ -18,6 +18,7 @@ It's based on the stable CEF dll-wrapper API, therefore Node-CEF should be compa
 
 ### Currently available modules:
 
+- [Assertion Testing](https://nodejs.org/dist/latest-v4.x/docs/api/assert.html)
 - [Buffer](https://nodejs.org/dist/latest-v4.x/docs/api/buffer.html)
 - [Events](https://nodejs.org/dist/latest-v4.x/docs/api/events.html)
 - [File System](https://nodejs.org/dist/latest-v4.x/docs/api/fs.html) (Synchronous)
@@ -194,7 +195,7 @@ Because of the missing `ArrayBuffer` and `Uint8Array` supports from CEF, the sub
 
 |     CEF 3     | Chromium | Linux | Mac | Windows |
 |:-------------:|:--------:|:-----:|:---:|:-------:|
-|  Branch 2704  |   51.0   |   ?   |  ?  |    -    |
+|  Branch 2704  |   51.0   |   ?   |  ?  |    ?    |
 |  Branch 2623  |   49.0   |   ?   |  ?  |    ?    |
 |  Branch 2526  |   47.0   |   ?   |  ?  |    ?    |
 |  Branch 2454  |   45.0   |   ?   |  ?  |  WORKS  |
