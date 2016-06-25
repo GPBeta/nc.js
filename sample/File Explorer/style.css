@@ -1,0 +1,19 @@
+
+.ncjs-list-item {
+    word-break: break-word;
+    padding: 4px;
+    margin-bottom: 4px;
+    border: dotted 1px;
+
+    cursor: default;
+    -webkit-user-select: none;
+}
+
+.ncjs-list-item:hover {
+    background-color: grey;
+    color: white;
+}
+
+.ncjs-list-item:active {
+    background-color: black;
+}

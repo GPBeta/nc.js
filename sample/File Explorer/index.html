@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Node-CEF</title>
+    <meta charset="utf-8"/>
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <script type="text/javascript">
+    window.onload = function() {
+        var FileExplorer = ncjs.require('file_explorer').FileExplorer;
+        var output = document.getElementById('html_output');
+        var explorer = new FileExplorer(output, '/');
+    };
+    </script>
+</head>
+<body bgcolor="white">
+<h3>Node-CEF File Explorer</h3>
+<div id="html_output"></div>
+</body>
+</html>
