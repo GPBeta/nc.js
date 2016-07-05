@@ -386,7 +386,7 @@ template <Encoding E>
 static inline void SliceT(CefRefPtr<CefV8Value> object, const CefV8ValueList& args,
                           CefRefPtr<CefV8Value>& retval, CefString& except)
 {
-    Buffer* buf = Buffer::Get(object);
+    Buffer* buf = Buffer::Unwrap(object);
 
     if (buf == NULL)
         return BUFFER_ERROR;
@@ -405,7 +405,7 @@ template <Encoding E>
 static inline void WriteT(CefRefPtr<CefV8Value> object, const CefV8ValueList& args,
                           CefRefPtr<CefV8Value>& retval, CefString& except)
 {
-    Buffer* buf = Buffer::Get(object);
+    Buffer* buf = Buffer::Unwrap(object);
 
     if (buf == NULL)
         return BUFFER_ERROR;
@@ -442,7 +442,7 @@ static inline void ReadNumberT(const CefV8ValueList& args,
 {
     NCJS_CHK_GE(args.size(), 2);
 
-    Buffer* buf = Buffer::Get(args[0]);
+    Buffer* buf = Buffer::Unwrap(args[0]);
 
     if (buf == NULL)
         return BUFFER_ERROR;
@@ -464,7 +464,7 @@ static inline void WriteNumberT(const CefV8ValueList& args,
 {
     NCJS_CHK_GE(args.size(), 3);
 
-    Buffer* buf = Buffer::Get(args[0]);
+    Buffer* buf = Buffer::Unwrap(args[0]);
 
     if (buf == NULL)
         return BUFFER_ERROR;
@@ -520,17 +520,6 @@ inline int Buffer::SubSearch(Buffer* sub, size_t offset, bool ucs2) const
     return (result == m_size) ? -1 : int(result);
 }
 
-inline void Buffer::Wrap(Buffer* buffer, CefRefPtr<CefV8Value>& value)
-{
-    if (buffer) {
-        value = CefV8Value::CreateObject(NULL);
-        value->SetValue(consts::str_length,
-                        CefV8Value::CreateUInt(unsigned(buffer->Size())),
-                        V8_PROPERTY_ATTRIBUTE_READONLY);
-        value->SetUserData(buffer);
-    }
-}
-
 inline Buffer* Buffer::Create(CefRefPtr<Environment> env, size_t size)
 {
     if (size == 0)
@@ -574,6 +563,14 @@ inline Buffer* Buffer::Create(const CefString& str, int encoding)
 Buffer* Buffer::Create(const CefString& str, const CefString& encoding)
 {
     return Create(str, ParseEncoding(encoding, UTF8));
+}
+
+inline void WrapBuffer(Buffer* buffer, CefRefPtr<CefV8Value>& value)
+{
+    if (buffer) {
+        value = buffer->Wrap();
+        NCJS_PROPERTY_READONLY(UInt, value, consts::str_length, unsigned(buffer->Size()));
+    }
 }
 
 /// ----------------------------------------------------------------------------
@@ -696,7 +693,7 @@ class BufferPrototype : public JsObjecT<BufferPrototype> {
         Buffer* dst = NULL;
 
         if (!args.size() ||
-            !(src = Buffer::Get(object)) || !(dst = Buffer::Get(args[0])))
+            !(src = Buffer::Unwrap(object)) || !(dst = Buffer::Unwrap(args[0])))
             return BUFFER_ERROR;
 
         INDEX_PARAM(dstStart, args, 1, 0, dst->Size());
@@ -746,14 +743,14 @@ class BindingObject : public JsObjecT<BindingObject> {
 
         NCJS_CHECK(args.size() == 1);
 
-        Buffer::Wrap(Buffer::Create(env, args[0]->GetUIntValue()), retval);
+        WrapBuffer(Buffer::Create(env, args[0]->GetUIntValue()), retval);
     }
 
     // subArray()
     NCJS_OBJECT_FUNCTION(SubArray)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        Buffer* buf = Buffer::Get(object);
+        Buffer* buf = Buffer::Unwrap(object);
 
         if (buf == NULL)
             return BUFFER_ERROR;
@@ -769,7 +766,7 @@ class BindingObject : public JsObjecT<BindingObject> {
             len = end > start ? end - start : 0;
         }
 
-        Buffer::Wrap(buf->SubBuffer(start, len), retval);
+        WrapBuffer(buf->SubBuffer(start, len), retval);
     }
 
     // setAt() no throw
@@ -786,7 +783,7 @@ class BindingObject : public JsObjecT<BindingObject> {
             value = retval->GetUIntValue();
         }
 
-        if (Buffer* buf = Buffer::Get(object)) {
+        if (Buffer* buf = Buffer::Unwrap(object)) {
             const unsigned offset = args[0]->GetUIntValue();
             if (offset < buf->Size())
                 buf->Data()[offset] = As<char>(value);
@@ -800,7 +797,7 @@ class BindingObject : public JsObjecT<BindingObject> {
         if (args.size() < 1)
             return;
 
-        if (Buffer* buf = Buffer::Get(object)) {
+        if (Buffer* buf = Buffer::Unwrap(object)) {
             const unsigned offset = args[0]->GetUIntValue();
             if (offset < buf->Size())
                 retval = CefV8Value::CreateUInt(As<unsigned char>(buf->Data()[offset]));
@@ -837,7 +834,7 @@ class ModuleBuffer : public JsObjecT<ModuleBuffer> {
         const CefString str = args[0]->GetStringValue();
         const CefString enc = args[1]->GetStringValue();
 
-        Buffer::Wrap(Buffer::Create(str, enc), retval);
+        WrapBuffer(Buffer::Create(str, enc), retval);
     }
 
     // buffer.byteLengthUtf8()
@@ -863,7 +860,7 @@ class ModuleBuffer : public JsObjecT<ModuleBuffer> {
         Buffer* bBuf = NULL;
 
         if (args.size() < 2 ||
-            !(aBuf = Buffer::Get(args[0])) || !(bBuf = Buffer::Get(args[1])))
+            !(aBuf = Buffer::Unwrap(args[0])) || !(bBuf = Buffer::Unwrap(args[1])))
             return BUFFER_ERROR;
 
         const size_t len = Min(aBuf->Size(), bBuf->Size());
@@ -887,7 +884,7 @@ class ModuleBuffer : public JsObjecT<ModuleBuffer> {
     {
         NCJS_CHECK(args.size() >= 4);
 
-        Buffer* buf = Buffer::Get(args[0]);
+        Buffer* buf = Buffer::Unwrap(args[0]);
 
         if (buf == NULL)
             return BUFFER_ERROR;
@@ -944,8 +941,8 @@ class ModuleBuffer : public JsObjecT<ModuleBuffer> {
         if (args.size() > 3)
             enc = ParseEncoding(args[3]->GetStringValue(), UTF8);
 
-        Buffer* obj = Buffer::Get(args[0]);
-        Buffer* buf = Buffer::Get(args[1]);
+        Buffer* obj = Buffer::Unwrap(args[0]);
+        Buffer* buf = Buffer::Unwrap(args[1]);
 
         if (obj == NULL || buf == NULL)
             return BUFFER_ERROR;
@@ -963,7 +960,7 @@ class ModuleBuffer : public JsObjecT<ModuleBuffer> {
         NCJS_ASSERT(args[1]->IsUInt());
         NCJS_ASSERT(args[2]->IsInt());
 
-        Buffer* buf = Buffer::Get(args[0]);
+        Buffer* buf = Buffer::Unwrap(args[0]);
 
         if (buf == NULL)
             return BUFFER_ERROR;
@@ -994,7 +991,7 @@ class ModuleBuffer : public JsObjecT<ModuleBuffer> {
         if (args.size() > 3)
             enc = ParseEncoding(args[3]->GetStringValue(), UTF8);
 
-        Buffer* obj = Buffer::Get(args[0]);
+        Buffer* obj = Buffer::Unwrap(args[0]);
 
         if (obj == NULL)
             return BUFFER_ERROR;

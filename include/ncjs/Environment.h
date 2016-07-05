@@ -17,16 +17,16 @@ typedef struct uv_loop_s uv_loop_t;
 /// Headers
 /// ----------------------------------------------------------------------------
 
-#include "ncjs/UserData.h"
-
 #include <include/cef_v8.h>
 
 namespace ncjs {
 
+class EventLoop;
+
 /// ----------------------------------------------------------------------------
 /// \class Environment
 /// ----------------------------------------------------------------------------
-class Environment : public UserData {
+class Environment : public CefBase {
 
     friend class Core;
 
@@ -40,6 +40,8 @@ class Environment : public UserData {
 
     struct Function {
         CefRefPtr<CefV8Value> op_new;
+        CefRefPtr<CefV8Value> op_throw;
+        CefRefPtr<CefV8Value> new_error;
         CefRefPtr<CefV8Value> ctor_fs_stats;
 
         Function() {}
@@ -54,6 +56,11 @@ class Environment : public UserData {
     } m_object;
 
 public:
+
+    class Listener : public CefBase {
+    public:
+        virtual void OnContextReleased(CefRefPtr<CefV8Context> context) = 0;
+    };
 
     class BufferObjectInfo { // original: ArrayBufferAllocatorInfo
         friend class Environment;
@@ -84,6 +91,24 @@ public:
         return m_function.op_new->ExecuteFunction(obj, args);
     }
 
+    bool AddListener(const CefRefPtr<Listener>& listener)
+    {
+        m_listener.push_back(listener);
+
+        return true;
+    }
+
+    bool RemoveListener(const CefRefPtr<Listener>& listener)
+    {
+        for (ListenerList::iterator it = m_listener.begin(); it != m_listener.end(); ++it) {
+            if (*it == listener) {
+                m_listener.erase(it);
+                return true;
+            }
+        }
+        return false;
+    }
+
     void Setup(const CefString& execPath, const CefString& pagePath,
                const CefString& frameUrl, CefRefPtr<CefV8Value> process);
 
@@ -106,7 +131,8 @@ public:
 #endif
     }
 
-    static uv_loop_t* GetEventLoop() { return s_loop; }
+    static EventLoop& GetAsyncLoop() { return s_loopAsync; }
+    static uv_loop_t*  GetSyncLoop() { return s_loopSync; }
 
     static double GetProcessStartTime() { return s_startTime; }
 
@@ -139,28 +165,22 @@ public:
     static void UvException(int err, const char* syscall, const char* msg,
                             const char* path, const char* dest, CefString& except);
 
-    static Environment* Get(CefRefPtr<CefV8Context> context)
-    {
-        return Get(context->GetGlobal()->GetValue(STR_INTERNAL_OBJECT));
-    }
-
+    static Environment* Get(const CefRefPtr<CefV8Context>& context);
     static Environment* Create(CefRefPtr<CefV8Context> context);
+    static void InvalidateContext(const CefRefPtr<CefV8Context>& context);
 
 private:
 
-    // only available for objects created by factory method
-    static Environment* Get(CefRefPtr<CefV8Value> object)
-    {
-        CefRefPtr<CefBase> data = object->GetUserData();
-
-        if (!IsTypeOf(data, ENVIRONMENT))
-            return NULL;
-
-        return static_cast<Environment*>(data.get());
-    }
+    typedef std::vector< CefRefPtr<Listener> > ListenerList;
+    typedef std::map< CefRefPtr<CefV8Context>, CefRefPtr<Environment> > EnvMap;
 
     static bool Initialize();
     static void Shutdown();
+
+    /// Utilities Functions
+    /// --------------------------------------------------------------
+
+    static bool FindEnvironment(const CefRefPtr<CefV8Context>& context, EnvMap::iterator& it);
 
     /// Constructors & Destructor
     /// --------------------------------------------------------------
@@ -171,17 +191,20 @@ private:
     /// Declarations
     /// -----------------
 
+    ListenerList m_listener;
+
     BufferObjectInfo m_infoBufferObject;
     
     CefString m_pathExec;
     CefString m_pathPage;
     CefString m_urlFrame;
-    
-    static uv_loop_t* s_loop;
+
+    static uv_loop_t* s_loopSync;
+    static EventLoop s_loopAsync;
 
     static const double s_startTime;
 
-    static const CefString STR_INTERNAL_OBJECT;
+    static EnvMap s_map;
 
     IMPLEMENT_REFCOUNTING(Environment);
 };

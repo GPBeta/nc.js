@@ -15,24 +15,28 @@
 #define _WINSOCKAPI_    // stops windows.h including winsock.h
 
 #define ASYNC_DEST_CALL(_FUNCTION, _REQ, _DEST, ...) \
-    except = consts::str_err_notimpl; return;
+    EventLoop& _loop = Environment::GetAsyncLoop(); \
+    CefRefPtr<AsyncReqWrap> _wrap(new AsyncReqWrap(_loop, #_FUNCTION, _DEST, _REQ)); \
+    AsyncCall<&uv_fs_##_FUNCTION>(_loop, _wrap, &uv_fs_##_FUNCTION, __VA_ARGS__); \
+    retval = _REQ
 
 #define ASYNC_CALL(_FUNCTION, _REQ, ...) \
     ASYNC_DEST_CALL(_FUNCTION, _REQ, NULL, __VA_ARGS__)
 
+#define ASYNC_HOLD_DATA(_DATA) _wrap->HoldData(_DATA)
+
 #define SYNC_DEST_CALL(_FUNCTION, _PATH, _DEST, ...) \
-    SyncReqWrap req_wrap; \
-    int err = uv_fs_##_FUNCTION(Environment::GetEventLoop(), \
-                               &req_wrap.req, __VA_ARGS__, NULL); \
-    if (err < 0) \
-        return Environment::UvException(err, #_FUNCTION, NULL, _PATH, _DEST, except);
+    SyncReqWrap _req; \
+    int _err = uv_fs_##_FUNCTION(Environment::GetSyncLoop(), \
+                               &_req.req, __VA_ARGS__, NULL); \
+    if (_err < 0) \
+        return Environment::UvException(_err, #_FUNCTION, NULL, _PATH, _DEST, except)
 
 #define SYNC_CALL(_FUNCTION, _PATH, ...) \
     SYNC_DEST_CALL(_FUNCTION, _PATH, NULL, __VA_ARGS__)
 
-#define SYNC_REQ req_wrap.req
-
-#define SYNC_RESULT err
+#define SYNC_REQ _req.req
+#define SYNC_RESULT _err
 
 #define    TYPE_ERROR(_MSG) Environment::TypeException(NCJS_TEXT(_MSG), except)
 #define   RANGE_ERROR(_MSG) Environment::RangeException(NCJS_TEXT(_MSG), except)
@@ -62,7 +66,7 @@
         return TYPE_ERROR("path required"); \
     if (!_ARGS[0]->IsString()) \
         return TYPE_ERROR("path must be a string"); \
-    const std::string _PATH(_ARGS[0]->GetStringValue().ToString())
+    const AutoString _PATH(_ARGS[0]->GetStringValue().ToString())
 
 #define GET_PARAM_PATH_MODE(_ARGS, _PATH, _MODE) \
     if (_ARGS.size() < 2) \
@@ -71,7 +75,7 @@
         return TYPE_ERROR("path must be a string"); \
     if (!_ARGS[1]->IsInt()) \
         return TYPE_ERROR("mode must be an integer"); \
-    const std::string _PATH(_ARGS[0]->GetStringValue().ToString()); \
+    const AutoString _PATH(_ARGS[0]->GetStringValue().ToString()); \
     const int _MODE = _ARGS[1]->GetIntValue()
 
 #define GET_PARAM_SRC_DST(_ARGS, _SRC, _DST) \
@@ -83,8 +87,8 @@
         return TYPE_ERROR("dst path must be a string"); \
     if (!_ARGS[1]->IsString()) \
         return TYPE_ERROR("src path must be a string"); \
-    const std::string _SRC(_ARGS[0]->GetStringValue().ToString()); \
-    const std::string _DST(_ARGS[1]->GetStringValue().ToString())
+    const AutoString _SRC(_ARGS[0]->GetStringValue().ToString()); \
+    const AutoString _DST(_ARGS[1]->GetStringValue().ToString())
 
 /// ----------------------------------------------------------------------------
 /// headers
@@ -92,8 +96,12 @@
 
 #include "ncjs/module.h"
 #include "ncjs/constants.h"
+#include "ncjs/EventLoop.h"
+#include "ncjs/module/fs.h"
 #include "ncjs/module/buffer.h"
 
+#include <include/base/cef_bind.h>
+#include <include/wrapper/cef_closure_task.h>
 #include <uv.h>
 
 #include <fcntl.h>
@@ -104,6 +112,24 @@ namespace ncjs {
 /// variables
 /// ----------------------------------------------------------------------------
 
+class AutoString : public std::string {
+public:
+    AutoString(const char* str) { if (str) assign(str); }
+    AutoString(const std::string& str) : std::string(str) {}
+    operator const char*() const { return length() ? c_str() : NULL; }
+};
+
+class AutoUvBuffer : public CefBase, public uv_buf_t {
+public:
+    AutoUvBuffer(const CefRefPtr<Buffer>& buf, unsigned pos, unsigned sz) :
+        holder(buf) { base = buf->Data() + pos; len = sz; }
+
+private:
+    CefRefPtr<Buffer> holder;
+
+    IMPLEMENT_REFCOUNTING(AutoUvBuffer);
+};
+
 struct SyncReqWrap {
     uv_fs_t req;
 
@@ -113,11 +139,232 @@ struct SyncReqWrap {
     DISALLOW_COPY_AND_ASSIGN(SyncReqWrap);
 };
 
+class AsyncReqWrap : public CefBase {
+
+    template <void* T> struct After;
+
+public:
+    template <void* T, class F, class P1>
+    void Run(const P1& p1)
+    {
+        Dispatch(static_cast<F>(T)(loop, &req, p1, &After<T>::Entry));
+    }
+
+    template <void* T, class F, class P1, class P2>
+    void Run(const P1& p1, const P2& p2)
+    {
+        Dispatch(static_cast<F>(T)(loop, &req, p1, p2, &After<T>::Entry));
+    }
+
+    template <void* T, class F, class P1, class P2, class P3>
+    void Run(const P1& p1, const P2& p2, const P3& p3)
+    {
+        Dispatch(static_cast<F>(T)(loop, &req, p1, p2, p3, &After<T>::Entry));
+    }
+
+    template <void* T, class F, class P1, class P2, class P3, class P4>
+    void Run(const P1& p1, const P2& p2, const P3& p3, const P4& p4)
+    {
+        Dispatch(static_cast<F>(T)(loop, &req, p1, p2, p3, p4, &After<T>::Entry));
+    }
+
+    void HoldData(const CefRefPtr<CefBase>& lifeSpanData)
+    {
+        data = lifeSpanData;
+    }
+
+    AsyncReqWrap(EventLoop& eventLoop, const char* syscall, const AutoString& destPath,
+        const CefRefPtr<CefV8Value>& reqWrap) :
+        loop(eventLoop.ToUv()), call(syscall), dest(destPath),
+        context(CefV8Context::GetCurrentContext()), wrap(reqWrap) {}
+    ~AsyncReqWrap() { uv_fs_req_cleanup(&req); }
+
+private:
+
+    void Dispatch(int result)
+    {
+        // keep alive, must call Release manually
+        req.data = this; AddRef();
+
+        if (result < 0) {
+            req.result = result;
+            CefPostTask(TID_RENDERER, base::Bind(&AsyncReqWrap::OnError, this));
+        }
+    }
+
+    template <void* T> struct After {
+        static void Entry(uv_fs_t* req)
+        {
+            AsyncReqWrap* wrap = static_cast<AsyncReqWrap*>(req->data);
+
+            NCJS_ASSERT(wrap);
+
+            if (req->result < 0) {
+                CefPostTask(TID_RENDERER, base::Bind(&AsyncReqWrap::OnError, wrap));
+            } else {
+                CefPostTask(TID_RENDERER, base::Bind(&AsyncReqWrap::OnSuccess<T>, wrap));
+            }
+        }
+    };
+
+    template <void* T>
+    void Success(Environment& env, CefV8ValueList& args) {}
+
+    // specialized Success<T>()
+
+    template <> void Success<&uv_fs_utime>(Environment& env, CefV8ValueList& args) 
+    {
+        args.clear();
+    }
+    template <> void Success<&uv_fs_futime>(Environment& env, CefV8ValueList& args)
+    {
+        args.clear();
+    }
+    template <> void Success<&uv_fs_open>(Environment& env, CefV8ValueList& args)
+    {
+        args.push_back(CefV8Value::CreateInt(int(req.result)));
+    }
+    template <> void Success<&uv_fs_read>(Environment& env, CefV8ValueList& args)
+    {
+        args.push_back(CefV8Value::CreateInt(int(req.result)));
+    }
+    template <> void Success<&uv_fs_write>(Environment& env, CefV8ValueList& args)
+    {
+        args.push_back(CefV8Value::CreateInt(int(req.result)));
+    }
+    template <> void Success<&uv_fs_stat>(Environment& env, CefV8ValueList& args)
+    {
+        args.push_back(BuildStatsObject(env, static_cast<uv_stat_t*>(req.ptr)));
+    }
+    template <> void Success<&uv_fs_lstat>(Environment& env, CefV8ValueList& args)
+    {
+        args.push_back(BuildStatsObject(env, static_cast<uv_stat_t*>(req.ptr)));
+    }
+    template <> void Success<&uv_fs_fstat>(Environment& env, CefV8ValueList& args)
+    {
+        args.push_back(BuildStatsObject(env, static_cast<uv_stat_t*>(req.ptr)));
+    }
+    template <> void Success<&uv_fs_readlink>(Environment& env, CefV8ValueList& args)
+    {
+        args.push_back(CefV8Value::CreateString(static_cast<const char*>(req.ptr)));
+    }
+    template <> void Success<&uv_fs_scandir>(Environment& env, CefV8ValueList& args)
+    {
+        CefRefPtr<CefV8Value> names = CefV8Value::CreateArray(0);
+
+        for (unsigned i = 0; ; ++i) {
+            uv_dirent_t ent;
+            const int res = uv_fs_scandir_next(&req, &ent);
+
+            if (res == UV_EOF)
+                break;
+            if (res) {
+                CefString except;
+                CefV8ValueList str;
+                Environment::UvException(res, call, NULL,
+                    static_cast<const char*>(req.path), NULL, except);
+                str.push_back(CefV8Value::CreateString(except));
+                args.clear();
+                args.push_back(env.GetFunction().new_error->ExecuteFunction(NULL, str));
+                break;
+            }
+
+            names->SetValue(i, CefV8Value::CreateString(ent.name));               
+        }
+
+        args.push_back(names);
+    }
+
+    template <void* T>
+    void OnSuccess()
+    {
+        if (Environment* env = Environment::Get(context)) {
+            context->Enter();
+
+            CefV8ValueList args; // should have at least 1 argument
+            args.push_back(CefV8Value::CreateNull());
+            Success<T>(*env, args);
+            CefRefPtr<CefV8Value> callback = wrap->GetValue(consts::str_oncomplete);
+            callback->ExecuteFunction(wrap, args);
+
+            context->Exit();
+        }
+        // really delete here
+        req.data = NULL; Release();
+    }
+
+    void OnError()
+    {
+        if (Environment* env = Environment::Get(context)) {
+            context->Enter();
+
+            CefV8ValueList args;
+            CefString except;
+            Environment::UvException(int(req.result), call, NULL, req.path, dest, except);
+            args.push_back(CefV8Value::CreateString(except));
+            CefRefPtr<CefV8Value> callback = wrap->GetValue(consts::str_oncomplete);
+            callback->ExecuteFunction(wrap, args);
+
+            context->Exit();
+        } // else context already released
+
+        // really delete here
+        req.data = NULL; Release();
+    }
+
+    /// Declarations
+    /// -----------------
+
+    uv_loop_t* loop;
+    uv_fs_t req;
+
+    const char* call;
+    AutoString dest;
+
+    CefRefPtr<CefV8Context> context;
+    CefRefPtr<CefV8Value> wrap;
+
+    CefRefPtr<CefBase> data;
+
+    DISALLOW_COPY_AND_ASSIGN(AsyncReqWrap);
+    IMPLEMENT_REFCOUNTING(AsyncReqWrap);
+};
+
+template <void* T, class F, class P1>
+void AsyncCall(EventLoop& loop, const CefRefPtr<AsyncReqWrap>& wrap,
+    const F&, const P1& p1)
+{
+    loop.Queue(base::Bind(&AsyncReqWrap::Run<T, F, P1>, wrap, p1));
+}
+
+template <void* T, class F, class P1, class P2>
+void AsyncCall(EventLoop& loop, const CefRefPtr<AsyncReqWrap>& wrap,
+    const F&, const P1& p1, const P2& p2)
+{
+    loop.Queue(base::Bind(&(AsyncReqWrap::Run<T, F, P1, P2>), wrap, p1, p2));
+}
+
+template <void* T, class F, class P1, class P2, class P3>
+void AsyncCall(EventLoop& loop, const CefRefPtr<AsyncReqWrap>& wrap,
+    const F&, const P1& p1, const P2& p2, const P3& p3)
+{
+    loop.Queue(base::Bind(&AsyncReqWrap::Run<T, F, P1, P2, P3>, wrap, p1, p2, p3));
+}
+
+template <void* T, class F, class P1, class P2, class P3, class P4>
+void AsyncCall(EventLoop& loop, const CefRefPtr<AsyncReqWrap>& wrap,
+    const F&, const P1& p1, const P2& p2, const P3& p3, const P4& p4)
+{
+    loop.Queue(base::Bind(&AsyncReqWrap::Run<T, F, P1, P2, P3, P4>, wrap, p1, p2, p3, p4));
+}
+
 /// ============================================================================
 /// implementation
 /// ============================================================================
 
-CefRefPtr<CefV8Value> BuildStatsObject(CefRefPtr<Environment> env, const uv_stat_t* s) {
+CefRefPtr<CefV8Value> BuildStatsObject(Environment& env, const UvState* stat)
+{
+    const uv_stat_t* s = static_cast<const uv_stat_t*>(stat);
     // see node_file.cc #343
     CefV8ValueList argv;
     argv.reserve(14);
@@ -174,42 +421,30 @@ CefRefPtr<CefV8Value> BuildStatsObject(CefRefPtr<Environment> env, const uv_stat
 #undef X
 
     // Call out to JavaScript to create the stats object
-    return env->New(env->GetFunction().ctor_fs_stats, argv);
+    return env.New(env.GetFunction().ctor_fs_stats, argv);
 }
 
 /// ----------------------------------------------------------------------------
-/// StatWatcherPrototype
+/// FSReqWrap
 /// ----------------------------------------------------------------------------
 
-class StatWatcher : public JsObjecT<StatWatcher> {
-
-    // StatWatcher.start()
-    NCJS_OBJECT_FUNCTION(Start)(CefRefPtr<CefV8Value> object,
-        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
-    {
-        except = consts::str_err_notimpl;
-    }
-
-   // StatWatcher.stop()
-    NCJS_OBJECT_FUNCTION(Stop)(CefRefPtr<CefV8Value> object,
-        const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
-    {
-        except = consts::str_err_notimpl;
-    }
-
-    // StatWatcher()
+class FSReqWrap : public JsObjecT<FSReqWrap> {
+    // FSReqWrap()
     NCJS_OBJECT_FUNCTION(Constructor)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        except = consts::str_err_notimpl;
+        // TODO: check if constructor call
     }
 
     // class factory
 
     NCJS_BEGIN_CLASS_FACTORY(Constructor)
-        NCJS_MAP_OBJECT_FUNCTION("start", Start)
-        NCJS_MAP_OBJECT_FUNCTION("stop", Stop)
     NCJS_END_CLASS_FACTORY()
+};
+
+class StatWatcher {
+public: // we should really separate StatWatcher from fs module
+    static CefRefPtr<CefV8Value> ObjectFactory(CefRefPtr<Environment>, CefRefPtr<CefV8Context>);
 };
 
 /// ----------------------------------------------------------------------------
@@ -222,13 +457,13 @@ class ModuleFS : public JsObjecT<ModuleFS> {
     NCJS_OBJECT_FUNCTION(InternalModuleReadFile)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        uv_loop_t* loop = Environment::GetEventLoop();
+        uv_loop_t* loop = Environment::GetSyncLoop();
 
         NCJS_CHECK(NCJS_ARG_IS(String, args, 0));
-        const std::string path(args[0]->GetStringValue().ToString());
+        const AutoString path(args[0]->GetStringValue().ToString());
 
         uv_fs_t reqOpen;
-        const int fd = uv_fs_open(loop, &reqOpen, path.c_str(), O_RDONLY, 0, NULL);
+        const int fd = uv_fs_open(loop, &reqOpen, path, O_RDONLY, 0, NULL);
         uv_fs_req_cleanup(&reqOpen);
 
         if (fd < 0)
@@ -276,14 +511,14 @@ class ModuleFS : public JsObjecT<ModuleFS> {
     NCJS_OBJECT_FUNCTION(InternalModuleStat)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        uv_loop_t* loop = Environment::GetEventLoop();
+        uv_loop_t* loop = Environment::GetSyncLoop();
 
         NCJS_CHECK(NCJS_ARG_IS(String, args, 0));
 
-        const std::string path(args[0]->GetStringValue().ToString());
+        const AutoString path(args[0]->GetStringValue().ToString());
 
         uv_fs_t req;
-        int rc = uv_fs_stat(loop, &req, path.c_str(), NULL);
+        int rc = uv_fs_stat(loop, &req, path, NULL);
         if (rc == 0) {
             const uv_stat_t* const s = static_cast<const uv_stat_t*>(req.ptr);
             rc = !!(s->st_mode & S_IFDIR);
@@ -300,9 +535,9 @@ class ModuleFS : public JsObjecT<ModuleFS> {
         GET_PARAM_PATH_MODE(args, path, mode);
 
         if (NCJS_ARG_IS(Object, args, 2)) {
-            ASYNC_CALL(access, args[2], path.c_str(), mode);
+            ASYNC_CALL(access, args[2], path, mode);
         } else {
-            SYNC_CALL(access, path.c_str(), path.c_str(), mode);
+            SYNC_CALL(access, path, path, mode);
         }
     }
 
@@ -313,9 +548,9 @@ class ModuleFS : public JsObjecT<ModuleFS> {
         GET_PARAM_FD(args, fd);
 
         if (NCJS_ARG_IS(Object, args, 1)) {
-            ASYNC_CALL(close, args[1], fd)
+            ASYNC_CALL(close, args[1], fd);
         } else {
-            SYNC_CALL(close, 0, fd)
+            SYNC_CALL(close, 0, fd);
         }
     }
 
@@ -337,14 +572,14 @@ class ModuleFS : public JsObjecT<ModuleFS> {
         if (!args[2]->IsInt())
             return TYPE_ERROR("mode must be an int");
 
-        const std::string path(args[0]->GetStringValue().ToString());
+        const AutoString path(args[0]->GetStringValue().ToString());
         const int flags = args[1]->GetIntValue();
         const int mode = args[2]->GetIntValue();
 
         if (NCJS_ARG_IS(Object, args, 3)) {
-            ASYNC_CALL(open, args[3], path.c_str(), flags, mode)
+            ASYNC_CALL(open, args[3], path, flags, mode);
         } else {
-            SYNC_CALL(open, path.c_str(), path.c_str(), flags, mode)
+            SYNC_CALL(open, path, path, flags, mode);
             retval = CefV8Value::CreateInt(SYNC_RESULT);
         }
     }
@@ -353,13 +588,13 @@ class ModuleFS : public JsObjecT<ModuleFS> {
     NCJS_OBJECT_FUNCTION(Read)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        Buffer* buffer = NULL;
+        Buffer* buf = NULL;
 
         if (args.size() < 2)
             return TYPE_ERROR("fd and buffer are required");
         if (!args[0]->IsInt())
             return TYPE_ERROR("fd must be a file descriptor");
-        if (!(buffer = Buffer::Get(args[1])))
+        if (!(buf = Buffer::Unwrap(args[1])))
             return TYPE_ERROR("Second argument needs to be a buffer");
 
         const int fd = args[0]->GetIntValue();
@@ -367,30 +602,26 @@ class ModuleFS : public JsObjecT<ModuleFS> {
         int64_t pos = -1;
         unsigned len = 0;
         unsigned off = 0;
-        char* buf = NULL;
-
 
         if (NCJS_ARG_IS(Int, args, 2))
             off = args[2]->GetUIntValue();
-        if (off >= buffer->Size())
+        if (off >= buf->Size())
             return RANGE_ERROR("Offset is out of bounds");
 
         if (NCJS_ARG_IS(Int, args, 3))
             len = args[3]->GetUIntValue();
-        if (!Buffer::IsWithinBounds(off, len, buffer->Size()))
+        if (!Buffer::IsWithinBounds(off, len, buf->Size()))
             return RANGE_ERROR("Length extends beyond buffer");
 
         if (NCJS_ARG_IS(Int, args, 4))
-            pos = args[4]->GetUIntValue();
+            pos = args[4]->GetIntValue(); // be aware -1
 
-        buf = buffer->Data() + off;
-
-        uv_buf_t uvbuf = uv_buf_init(const_cast<char*>(buf), len);
+        CefRefPtr<AutoUvBuffer> uvbuf(new AutoUvBuffer(buf, off, len));
 
         if (NCJS_ARG_IS(Object, args, 5)) {
-            ASYNC_CALL(read, args[5], fd, &uvbuf, 1, pos);
+            ASYNC_CALL(read, args[5], fd, uvbuf, 1, pos);
         } else {
-            SYNC_CALL(read, 0, fd, &uvbuf, 1, pos)
+            SYNC_CALL(read, 0, fd, uvbuf, 1, pos);
             retval = CefV8Value::CreateInt(SYNC_RESULT);
         }
     }
@@ -402,9 +633,9 @@ class ModuleFS : public JsObjecT<ModuleFS> {
         GET_PARAM_FD(args, fd);
 
         if (NCJS_ARG_IS(Object, args, 1)) {
-            ASYNC_CALL(fdatasync, args[1], fd)
+            ASYNC_CALL(fdatasync, args[1], fd);
         } else {
-            SYNC_CALL(fdatasync, 0, fd)
+            SYNC_CALL(fdatasync, 0, fd);
         }
     }
 
@@ -415,9 +646,9 @@ class ModuleFS : public JsObjecT<ModuleFS> {
         GET_PARAM_FD(args, fd);
 
         if (NCJS_ARG_IS(Object, args, 1)) {
-            ASYNC_CALL(fsync, args[1], fd)
+            ASYNC_CALL(fsync, args[1], fd);
         } else {
-            SYNC_CALL(fsync, 0, fd)
+            SYNC_CALL(fsync, 0, fd);
         }
     }
 
@@ -428,9 +659,9 @@ class ModuleFS : public JsObjecT<ModuleFS> {
         GET_PARAM_FD_INT(args, fd, length);
 
         if (NCJS_ARG_IS(Object, args, 2)) {
-            ASYNC_CALL(ftruncate, args[2], fd, length)
+            ASYNC_CALL(ftruncate, args[2], fd, length);
         } else {
-            SYNC_CALL(ftruncate, 0, fd, length)
+            SYNC_CALL(ftruncate, 0, fd, length);
         }
     }
 
@@ -444,9 +675,9 @@ class ModuleFS : public JsObjecT<ModuleFS> {
         const char* pathNew = strNew.c_str();
 
         if (NCJS_ARG_IS(Object, args, 2)) {
-            ASYNC_DEST_CALL(rename, args[2], pathNew, pathOld, pathNew)
+            ASYNC_DEST_CALL(rename, args[2], pathNew, pathOld, pathNew);
         } else {
-            SYNC_DEST_CALL(rename, pathOld, pathNew, pathOld, pathNew)
+            SYNC_DEST_CALL(rename, pathOld, pathNew, pathOld, pathNew);
         }
     }
 
@@ -457,9 +688,9 @@ class ModuleFS : public JsObjecT<ModuleFS> {
         GET_PARAM_PATH(args, path);
 
         if (NCJS_ARG_IS(Object, args, 1)) {
-            ASYNC_CALL(rmdir, args[1], path.c_str())
+            ASYNC_CALL(rmdir, args[1], path);
         } else {
-            SYNC_CALL(rmdir, path.c_str(), path.c_str())
+            SYNC_CALL(rmdir, path, path);
         }
     }
 
@@ -470,9 +701,9 @@ class ModuleFS : public JsObjecT<ModuleFS> {
         GET_PARAM_PATH_MODE(args, path, mode);
 
         if (NCJS_ARG_IS(Object, args, 2)) {
-            ASYNC_CALL(mkdir, args[2], path.c_str(), mode)
+            ASYNC_CALL(mkdir, args[2], path, mode);
         } else {
-            SYNC_CALL(mkdir, path.c_str(), path.c_str(), mode)
+            SYNC_CALL(mkdir, path, path, mode);
         }
     }
 
@@ -483,9 +714,9 @@ class ModuleFS : public JsObjecT<ModuleFS> {
         GET_PARAM_PATH(args, path);
 
         if (NCJS_ARG_IS(Object, args, 1)) {
-            ASYNC_CALL(scandir, args[1], path.c_str(), 0)
+            ASYNC_CALL(scandir, args[1], path, 0);
         } else {
-            SYNC_CALL(scandir, path.c_str(), path.c_str(), 0)
+            SYNC_CALL(scandir, path, path, 0);
 
             NCJS_CHK_GE(SYNC_REQ.result, 0);
 
@@ -499,7 +730,7 @@ class ModuleFS : public JsObjecT<ModuleFS> {
                     break;
                 if (res)
                     return Environment::UvException(res, "readdir", NULL,
-                                                    path.c_str(), NULL, except);
+                                                    path, NULL, except);
 
                 names->SetValue(i, CefV8Value::CreateString(ent.name));               
             }
@@ -514,13 +745,13 @@ class ModuleFS : public JsObjecT<ModuleFS> {
     {
         GET_PARAM_PATH(args, path);
 
-        CefRefPtr<Environment> env = Environment::Get(CefV8Context::GetCurrentContext());
+        Environment* env = Environment::Get(CefV8Context::GetCurrentContext());
 
         if (NCJS_ARG_IS(Object, args, 1)) {
-            ASYNC_CALL(stat, args[1], path.c_str())
+            ASYNC_CALL(stat, args[1], path);
         } else {
-            SYNC_CALL(stat, path.c_str(), path.c_str())
-            retval = BuildStatsObject(env, static_cast<const uv_stat_t*>(SYNC_REQ.ptr));
+            SYNC_CALL(stat, path, path);
+            retval = BuildStatsObject(*env, static_cast<uv_stat_t*>(SYNC_REQ.ptr));
         }
     }
 
@@ -530,13 +761,13 @@ class ModuleFS : public JsObjecT<ModuleFS> {
     {
         GET_PARAM_PATH(args, path);
 
-        CefRefPtr<Environment> env = Environment::Get(CefV8Context::GetCurrentContext());
+        Environment* env = Environment::Get(CefV8Context::GetCurrentContext());
 
         if (NCJS_ARG_IS(Object, args, 1)) {
-             ASYNC_CALL(lstat, args[1], path)
+             ASYNC_CALL(lstat, args[1], path);
         } else {
-             SYNC_CALL(lstat, path.c_str(), path.c_str())
-             retval = BuildStatsObject(env, static_cast<const uv_stat_t*>(SYNC_REQ.ptr));
+             SYNC_CALL(lstat, path, path);
+             retval = BuildStatsObject(*env, static_cast<uv_stat_t*>(SYNC_REQ.ptr));
         }
     }
 
@@ -546,13 +777,13 @@ class ModuleFS : public JsObjecT<ModuleFS> {
     {
         GET_PARAM_FD(args, fd);
 
-        CefRefPtr<Environment> env = Environment::Get(CefV8Context::GetCurrentContext());
+        Environment* env = Environment::Get(CefV8Context::GetCurrentContext());
 
         if (NCJS_ARG_IS(Object, args, 1)) {
-            ASYNC_CALL(fstat, args[1], fd)
+            ASYNC_CALL(fstat, args[1], fd);
         } else {
-            SYNC_CALL(fstat, 0, fd)
-            retval = BuildStatsObject(env, static_cast<const uv_stat_t*>(SYNC_REQ.ptr));
+            SYNC_CALL(fstat, 0, fd);
+            retval = BuildStatsObject(*env, static_cast<uv_stat_t*>(SYNC_REQ.ptr));
         }
     }
 
@@ -566,9 +797,9 @@ class ModuleFS : public JsObjecT<ModuleFS> {
         const char* pathDst = strDst.c_str();
 
         if (NCJS_ARG_IS(Object, args, 2)) {
-            ASYNC_DEST_CALL(link, args[2], pathDst, pathSrc, pathDst)
+            ASYNC_DEST_CALL(link, args[2], pathDst, pathSrc, pathDst);
         } else {
-            SYNC_DEST_CALL(link, pathSrc, pathDst, pathSrc, pathDst)
+            SYNC_DEST_CALL(link, pathSrc, pathDst, pathSrc, pathDst);
         }
     }
 
@@ -593,9 +824,9 @@ class ModuleFS : public JsObjecT<ModuleFS> {
         const char* path = strDst.c_str();
 
         if (NCJS_ARG_IS(Object, args, 3)) {
-            ASYNC_DEST_CALL(symlink, args[3], path, target, path, flags)
+            ASYNC_DEST_CALL(symlink, args[3], path, target, path, flags);
         } else {
-            SYNC_DEST_CALL(symlink, target, path, target, path, flags)
+            SYNC_DEST_CALL(symlink, target, path, target, path, flags);
         }
     }
 
@@ -606,9 +837,9 @@ class ModuleFS : public JsObjecT<ModuleFS> {
         GET_PARAM_PATH(args, path);
 
         if (NCJS_ARG_IS(Object, args, 1)) {
-            ASYNC_CALL(readlink, args[1], path.c_str())
+            ASYNC_CALL(readlink, args[1], path);
         } else {
-            SYNC_CALL(readlink, path.c_str(), path.c_str())
+            SYNC_CALL(readlink, path, path);
 
             retval = CefV8Value::CreateString(static_cast<const char*>(SYNC_REQ.ptr));
         }
@@ -621,9 +852,9 @@ class ModuleFS : public JsObjecT<ModuleFS> {
         GET_PARAM_PATH(args, path);
 
         if (NCJS_ARG_IS(Object, args, 1)) {
-            ASYNC_CALL(unlink, args[1], path.c_str())
+            ASYNC_CALL(unlink, args[1], path);
         } else {
-            SYNC_CALL(unlink, path.c_str(), path.c_str())
+            SYNC_CALL(unlink, path, path);
         }
     }
 
@@ -634,9 +865,9 @@ class ModuleFS : public JsObjecT<ModuleFS> {
         GET_PARAM_PATH_MODE(args, path, mode);
 
         if (NCJS_ARG_IS(Object, args, 2)) {
-            ASYNC_CALL(chmod, args[2], path.c_str(), mode);
+            ASYNC_CALL(chmod, args[2], path, mode);
         } else {
-            SYNC_CALL(chmod, path.c_str(), path.c_str(), mode);
+            SYNC_CALL(chmod, path, path, mode);
         }
     }
 
@@ -671,14 +902,14 @@ class ModuleFS : public JsObjecT<ModuleFS> {
         if (!args[2]->IsUInt())
             return TYPE_ERROR("gid must be an unsigned int");
 
-        const std::string path(args[0]->GetStringValue().ToString());
+        const AutoString path(args[0]->GetStringValue().ToString());
         const uv_uid_t uid = args[1]->GetUIntValue();
         const uv_gid_t gid = args[2]->GetUIntValue();
 
         if (NCJS_ARG_IS(Object, args, 3)) {
             ASYNC_CALL(chown, args[3], path, uid, gid);
         } else {
-            SYNC_CALL(chown, path.c_str(), path.c_str(), uid, gid);
+            SYNC_CALL(chown, path, path, uid, gid);
         }
     }
 
@@ -729,14 +960,14 @@ class ModuleFS : public JsObjecT<ModuleFS> {
         if (!args[2]->IsDouble())
             return TYPE_ERROR("mtime must be a number");
 
-        const std::string path(args[0]->GetStringValue().ToString());
+        const AutoString path(args[0]->GetStringValue().ToString());
         const double atime = args[1]->GetDoubleValue();
         const double mtime = args[2]->GetDoubleValue();
 
         if (NCJS_ARG_IS(Object, args, 3)) {
             ASYNC_CALL(utime, args[3], path, atime, mtime);
         } else {
-            SYNC_CALL(utime, path.c_str(), path.c_str(), atime, mtime);
+            SYNC_CALL(utime, path, path, atime, mtime);
         }
     }
 
@@ -783,7 +1014,7 @@ class ModuleFS : public JsObjecT<ModuleFS> {
         const unsigned len = size > 3 ? args[3]->GetUIntValue() : 0;
         const int64_t pos = size > 4 ? GET_OFFSET(args[4]) : -1;
 
-        Buffer* buf = Buffer::Get(args[1]); NCJS_CHECK(buf);
+        Buffer* buf = Buffer::Unwrap(args[1]); NCJS_CHECK(buf);
 
         if (off > buf->Size())
             return RANGE_ERROR("offset out of bounds");
@@ -794,12 +1025,13 @@ class ModuleFS : public JsObjecT<ModuleFS> {
         if (!Buffer::IsWithinBounds(off, len, buf->Size()))
             return RANGE_ERROR("off + len > buffer.length");
 
-        const uv_buf_t uvbuf = uv_buf_init(buf->Data() + off, len);
+        CefRefPtr<AutoUvBuffer> uvbuf(new AutoUvBuffer(buf, off, len));
 
         if (NCJS_ARG_IS(Object, args, 5)) {
-            ASYNC_CALL(write, args[5], fd, &uvbuf, 1, pos)
+            ASYNC_CALL(write, args[5], fd, uvbuf, 1, pos);
+            ASYNC_HOLD_DATA(buf);
         } else {
-            SYNC_CALL(write, NULL, fd, &uvbuf, 1, pos)
+            SYNC_CALL(write, NULL, fd, uvbuf, 1, pos);
 
             retval = CefV8Value::CreateInt(SYNC_RESULT);
         }
@@ -815,23 +1047,35 @@ class ModuleFS : public JsObjecT<ModuleFS> {
         NCJS_CHECK(args[0]->IsInt());
         NCJS_CHECK(args[1]->IsArray());
 
+        class BufferHolder : public CefBase {
+        public:
+            std::vector<uv_buf_t> bufs;
+            std::vector< CefRefPtr<Buffer> > data;
+
+            BufferHolder(size_t size) : bufs(size), data(size) {}
+
+            IMPLEMENT_REFCOUNTING(BufferHolder);
+        };
+
         const int fd = args[0]->GetIntValue();
         const int64_t pos = size > 2 ? GET_OFFSET(args[2]) : -1;
 
         CefRefPtr<CefV8Value> chunks = args[1];
         const unsigned nChunk = chunks->GetArrayLength();
-        std::vector<uv_buf_t> bufs(nChunk);
+        CefRefPtr<BufferHolder> hold(new BufferHolder(nChunk));
 
         for (unsigned i = 0; i < nChunk; ++i) {
-            if (Buffer* buf = Buffer::Get(chunks->GetValue(i))) {
-                bufs[i] = uv_buf_init(buf->Data(), unsigned(buf->Size()));
+            if (Buffer* buf = Buffer::Unwrap(chunks->GetValue(i))) {
+                hold->data[i] = buf;
+                hold->bufs[i] = uv_buf_init(buf->Data(), unsigned(buf->Size()));
             } else { return TYPE_ERROR("array elements all need to be buffers"); }
         }
 
         if (NCJS_ARG_IS(Object, args, 3)) {
-            ASYNC_CALL(write, args[3], fd, &bufs[0], nChunk, pos)
+            ASYNC_CALL(write, args[3], fd, &hold->bufs[0], nChunk, pos);
+            ASYNC_HOLD_DATA(hold);
         } else {
-            SYNC_CALL(write, NULL, fd, &bufs[0], nChunk, pos)
+            SYNC_CALL(write, NULL, fd, &hold->bufs[0], nChunk, pos);
 
             retval = CefV8Value::CreateInt(SYNC_RESULT);
         }
@@ -853,12 +1097,12 @@ class ModuleFS : public JsObjecT<ModuleFS> {
 
         CefRefPtr<Buffer> buf = Buffer::Create(str, enc); NCJS_CHECK(buf);
 
-        const uv_buf_t uvbuf = uv_buf_init(buf->Data(), unsigned(buf->Size()));
+        CefRefPtr<AutoUvBuffer> uvbuf(new AutoUvBuffer(buf, 0, unsigned(buf->Size())));
 
         if (NCJS_ARG_IS(Object, args, 4)) {
-            ASYNC_CALL(write, args[4], fd, &uvbuf, 1, pos)
+            ASYNC_CALL(write, args[4], fd, uvbuf, 1, pos);
         } else {
-            SYNC_CALL(write, NULL, fd, &uvbuf, 1, pos)
+            SYNC_CALL(write, NULL, fd, uvbuf, 1, pos);
 
             retval = CefV8Value::CreateInt(SYNC_RESULT);
         }
@@ -880,6 +1124,7 @@ class ModuleFS : public JsObjecT<ModuleFS> {
     NCJS_BEGIN_OBJECT_FACTORY()
         // objects
         NCJS_MAP_OBJECT_FACTORY("StatWatcher", StatWatcher)
+        NCJS_MAP_OBJECT_FACTORY("FSReqWrap",   FSReqWrap)
 
         // functions
         NCJS_MAP_OBJECT_FUNCTION("FSInitialize", FSInitialize)

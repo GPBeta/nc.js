@@ -50,6 +50,14 @@ void RenderProcessHandler::OnWebKitInitialized()
     Core::RegisterExtension();
 }
 
+void RenderProcessHandler::OnContextReleased(CefRefPtr<CefBrowser> browser,
+    CefRefPtr<CefFrame> frame,
+    CefRefPtr<CefV8Context> context)
+{
+    // may also destroy environment object
+    Environment::InvalidateContext(context);
+}
+
 void RenderProcessHandler::OnUncaughtException(CefRefPtr<CefBrowser> browser,
     CefRefPtr<CefFrame> frame,
     CefRefPtr<CefV8Context> context,
@@ -58,15 +66,16 @@ void RenderProcessHandler::OnUncaughtException(CefRefPtr<CefBrowser> browser,
 {
     // works only if CefSettings::uncaught_exception_stack_size > 0
 
-    CefRefPtr<Environment> env = Environment::Get(context);
-    CefRefPtr<CefV8Value> process = env->GetObject().process;
-    CefRefPtr<CefV8Value> emit = process->GetValue(consts::str_emit);
+    if (Environment* env = Environment::Get(context)) {
+        CefRefPtr<CefV8Value> process = env->GetObject().process;
+        CefRefPtr<CefV8Value> emit = process->GetValue(consts::str_emit);
 
-    if (emit.get()) {
-        CefV8ValueList args;
-        args.push_back(CefV8Value::CreateString(consts::str_uncaught_except));
-        args.push_back(CefV8Value::CreateString(exception->GetMessage()));
-        emit->ExecuteFunction(process, args);
+        if (emit.get()) {
+            CefV8ValueList args;
+            args.push_back(CefV8Value::CreateString(consts::str_uncaught_except));
+            args.push_back(CefV8Value::CreateString(exception->GetMessage()));
+            emit->ExecuteFunction(process, args);
+        }
     }
 }
 

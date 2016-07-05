@@ -356,7 +356,7 @@ class ProcessObject : public JsObjecT<ProcessObject> {
     NCJS_OBJECT_FUNCTION(Uptime)(CefRefPtr<CefV8Value> object,
         const CefV8ValueList& args, CefRefPtr<CefV8Value>& retval, CefString& except)
     {
-        uv_loop_t* loop = Environment::GetEventLoop();
+        uv_loop_t* loop = Environment::GetSyncLoop();
         uv_update_time(loop);
         double uptime = uv_now(loop) - Environment::GetProcessStartTime();
 

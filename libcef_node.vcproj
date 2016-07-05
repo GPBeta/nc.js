@@ -377,7 +377,19 @@
 					>
 				</File>
 				<File
+					RelativePath=".\src\EventLoop.cpp"
+					>
+				</File>
+				<File
 					RelativePath=".\src\module\fs.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\src\module\fs_event_wrap.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\src\module\fs_stat_watcher.cpp"
 					>
 				</File>
 				<File
@@ -425,6 +437,14 @@
 			</File>
 			<File
 				RelativePath=".\include\ncjs\Environment.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\ncjs\EventLoop.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\ncjs\HandleWrap.h"
 				>
 			</File>
 			<File
@@ -482,6 +502,10 @@
 				>
 				<File
 					RelativePath=".\include\ncjs\module\buffer.h"
+					>
+				</File>
+				<File
+					RelativePath=".\include\ncjs\module\fs.h"
 					>
 				</File>
 			</Filter>

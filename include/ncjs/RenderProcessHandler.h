@@ -50,7 +50,7 @@ public:
 
     virtual void OnContextReleased(CefRefPtr<CefBrowser> browser,
                                    CefRefPtr<CefFrame> frame,
-                                   CefRefPtr<CefV8Context> context) OVERRIDE {}
+                                   CefRefPtr<CefV8Context> context) OVERRIDE;
 
     virtual void OnUncaughtException(CefRefPtr<CefBrowser> browser,
                                      CefRefPtr<CefFrame> frame,

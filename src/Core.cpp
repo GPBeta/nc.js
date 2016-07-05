@@ -38,6 +38,7 @@ NCJS_DECLARE_BUILTIN_MODULE(natives);
 NCJS_DECLARE_BUILTIN_MODULE(buffer);
 NCJS_DECLARE_BUILTIN_MODULE(util);
 NCJS_DECLARE_BUILTIN_MODULE(fs);
+NCJS_DECLARE_BUILTIN_MODULE(fs_event_wrap);
 NCJS_DECLARE_BUILTIN_MODULE(os);
 NCJS_DECLARE_BUILTIN_MODULE(uv);
 
@@ -205,6 +206,7 @@ bool Core::Initialize(const CefRefPtr<CefCommandLine>& cmd)
     ModuleManager::Register(NCJS_BUILTIN_MODULE(buffer));
     ModuleManager::Register(NCJS_BUILTIN_MODULE(util));
     ModuleManager::Register(NCJS_BUILTIN_MODULE(fs));
+    ModuleManager::Register(NCJS_BUILTIN_MODULE(fs_event_wrap));
     ModuleManager::Register(NCJS_BUILTIN_MODULE(os));
     ModuleManager::Register(NCJS_BUILTIN_MODULE(uv));
 

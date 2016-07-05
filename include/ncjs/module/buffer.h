@@ -8,16 +8,14 @@
  * License:
  **************************************************************/
  
-#ifndef NCJS_BUFFER_H
-#define NCJS_BUFFER_H
+#ifndef NCJS_MODULE_BUFFER_H
+#define NCJS_MODULE_BUFFER_H
 
 /// ----------------------------------------------------------------------------
 /// Headers
 /// ----------------------------------------------------------------------------
 
 #include "ncjs/UserData.h"
-
-#include <include/cef_v8.h>
 
 namespace ncjs {
 
@@ -26,7 +24,7 @@ class Environment;
 /// ----------------------------------------------------------------------------
 /// \class Buffer
 /// ----------------------------------------------------------------------------
-class Buffer : public UserData {
+class Buffer : public UserData<Buffer, USER_DATA::BUFFER> {
 public:
 
     char* Data() const { return m_buffer; }
@@ -47,18 +45,6 @@ public:
 
     /// Static Functions
     /// --------------------------------------------------------------
-
-    static Buffer* Get(CefRefPtr<CefV8Value> object)
-    {
-        CefRefPtr<CefBase> data = object->GetUserData();
-        // NOTE: User data could be NULL.
-        if (IsTypeOf(data, BUFFER))
-            return static_cast<Buffer*>(data.get());
-
-        return NULL;
-    }
-
-    static void Wrap(Buffer* buffer, CefRefPtr<CefV8Value>& value);
 
     static bool IsWithinBounds(size_t off, size_t len, size_t max)
     {
@@ -82,7 +68,7 @@ public:
 private:
 
     Buffer(char* buffer, size_t size, const Buffer* owner = NULL) :
-       UserData(BUFFER), m_owner(owner), m_buffer(buffer), m_size(size) {}
+       m_owner(owner), m_buffer(buffer), m_size(size) {}
     ~Buffer() { if (NULL == m_owner.get()) free(m_buffer); }
     
     /// Declarations
@@ -101,4 +87,4 @@ private:
 
 } // ncjs
 
-#endif // NCJS_BUFFER_H
+#endif // NCJS_MODULE_BUFFER_H

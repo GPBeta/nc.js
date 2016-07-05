@@ -14,8 +14,8 @@ const fs = exports;
 const Buffer = require('buffer').Buffer;
 //const Stream = require('stream').Stream;
 const EventEmitter = require('events');
-//const FSReqWrap = binding.FSReqWrap;
-//const FSEvent = process.binding('fs_event_wrap').FSEvent;
+const FSReqWrap = binding.FSReqWrap;
+const FSEvent = process.binding('fs_event_wrap').FSEvent;
 
 //const Readable = Stream.Readable;
 //const Writable = Stream.Writable;

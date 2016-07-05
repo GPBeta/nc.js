@@ -38,11 +38,14 @@ namespace consts {
 
 // strings
 
+_NCJS_CONST_VAR_CEFSTR(str_NULL);
+
 _NCJS_CONST_DECLARE_CEFSTR(str_address, "address");
 _NCJS_CONST_DECLARE_CEFSTR(str_args, "args");
 _NCJS_CONST_DECLARE_CEFSTR(str_argv, "argv");
 _NCJS_CONST_DECLARE_CEFSTR(str_binding, "binding");
 _NCJS_CONST_DECLARE_CEFSTR(str_cache, "_cache");
+_NCJS_CONST_DECLARE_CEFSTR(str_change, "change");
 _NCJS_CONST_DECLARE_CEFSTR(str_dir, "dir");
 _NCJS_CONST_DECLARE_CEFSTR(str_emit, "emit");
 _NCJS_CONST_DECLARE_CEFSTR(str_exec_argv, "execArgv");
@@ -62,7 +65,11 @@ _NCJS_CONST_DECLARE_CEFSTR(str_modules, "modules");
 _NCJS_CONST_DECLARE_CEFSTR(str_module_load_list, "moduleLoadList");
 _NCJS_CONST_DECLARE_CEFSTR(str_netmask, "netmask");
 _NCJS_CONST_DECLARE_CEFSTR(str_nice, "nice");
+_NCJS_CONST_DECLARE_CEFSTR(str_onchange, "onchange");
+_NCJS_CONST_DECLARE_CEFSTR(str_oncomplete, "oncomplete");
+_NCJS_CONST_DECLARE_CEFSTR(str_onstop, "onstop");
 _NCJS_CONST_DECLARE_CEFSTR(str_prototype, "prototype");
+_NCJS_CONST_DECLARE_CEFSTR(str_rename, "rename");
 _NCJS_CONST_DECLARE_CEFSTR(str_rss, "rss");
 _NCJS_CONST_DECLARE_CEFSTR(str_scopeid, "scopeid");
 _NCJS_CONST_DECLARE_CEFSTR(str_speed, "speed");
@@ -71,6 +78,7 @@ _NCJS_CONST_DECLARE_CEFSTR(str_times, "times");
 _NCJS_CONST_DECLARE_CEFSTR(str_uncaught_except, "uncaughtException");
 _NCJS_CONST_DECLARE_CEFSTR(str_unknown, "<unknown>");
 _NCJS_CONST_DECLARE_CEFSTR(str_user, "user");
+_NCJS_CONST_DECLARE_CEFSTR(str_wrap, "_wrap");
 
 _NCJS_CONST_DECLARE_CEFSTR(str_err_notimpl, "Not Implemented.");
 

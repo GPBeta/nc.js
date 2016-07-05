@@ -21,6 +21,7 @@
 #include "ncjs/Environment.h"
 #include "ncjs/string.h"
 #include "ncjs/constants.h"
+#include "ncjs/EventLoop.h"
 
 #include <uv.h>
 
@@ -32,18 +33,27 @@ namespace ncjs {
 /// variables
 /// ----------------------------------------------------------------------------
 
-uv_loop_t* Environment::s_loop = NULL;
+uv_loop_t* Environment::s_loopSync = NULL;
+EventLoop Environment::s_loopAsync;
 
 const double Environment::s_startTime = double(uv_now(uv_default_loop()));
 
+Environment::EnvMap Environment::s_map;
+
 
 static const NCJS_DEFINE_REFTEXT(s_scriptNew, "(function() {\n\
-  var obj = Object.create(this.prototype);\n\
-  var res = this.apply(obj, arguments);\n\
-  return (typeof res === 'object' && res) || obj;\n\
+    var obj = Object.create(this.prototype);\n\
+    var res = this.apply(obj, arguments);\n\
+    return (typeof res === 'object' && res) || obj;\n\
 });");
 
-const NCJS_DEFINE_REFTEXT(Environment::STR_INTERNAL_OBJECT, "_ncjs_internal");
+static const NCJS_DEFINE_REFTEXT(s_scriptError, "(function(str) {\n\
+    return new Error(str);\n\
+});");
+
+static const NCJS_DEFINE_REFTEXT(s_scriptThrow, "(function(str) {\n\
+    throw new Error(str);\n\
+});");
 
 /// ============================================================================
 /// implementation
@@ -100,7 +110,7 @@ Environment::BufferObjectInfo::BufferObjectInfo()
         m_fields[i] = 0;
 }
 
-Environment::Environment() : UserData(ENVIRONMENT)
+Environment::Environment()
 {
 }
 
@@ -438,6 +448,16 @@ static inline const char* GetErrorString(int errorno) {
     return "";
 }
 
+inline bool Environment::FindEnvironment(const CefRefPtr<CefV8Context>& context, EnvMap::iterator& it)
+{
+    // really need a map?
+    for (it = s_map.begin(); it != s_map.end(); ++it) {
+        if (it->first->IsSame(context))
+            return true;
+    }
+    return false;
+}
+
 /// ----------------------------------------------------------------------------
 /// static functions
 /// ----------------------------------------------------------------------------
@@ -479,51 +499,68 @@ void Environment::UvException(int err, const char* syscall, const char* msg,
     except = format.str();
 }
 
+Environment* Environment::Get(const CefRefPtr<CefV8Context>& context)
+{
+    EnvMap::iterator it;
+    return FindEnvironment(context, it) ? it->second : NULL;
+}
+
 Environment* Environment::Create(CefRefPtr<CefV8Context> context)
 {
     Environment* env = new Environment;
     CefRefPtr<CefV8Value> global = context->GetGlobal();
 
-    // setup internal object
-    CefRefPtr<CefV8Value> vIternal = CefV8Value::CreateObject(NULL);
-    vIternal->SetUserData(env);
-    global->SetValue(STR_INTERNAL_OBJECT, vIternal,
-        CefV8Value::PropertyAttribute(V8_PROPERTY_ATTRIBUTE_READONLY | V8_PROPERTY_ATTRIBUTE_DONTDELETE));
+    // register context and store environment object
+    s_map[context] = env;
 
-    // comile 'new' function
+    // comile functions
     CefRefPtr<CefV8Exception> except;
+    // new
     context->Eval(s_scriptNew, env->GetFunction().op_new, except);
+    // new Error(str)
+    context->Eval(s_scriptError, env->GetFunction().new_error, except);
+    // throw
+    context->Eval(s_scriptThrow, env->GetFunction().op_throw, except);
 
     return env;
 }
 
+void Environment::InvalidateContext(const CefRefPtr<CefV8Context>& context)
+{
+    EnvMap::iterator itMap;
+
+    if (FindEnvironment(context, itMap)) {
+        ListenerList list;
+        list.swap(itMap->second->m_listener);
+
+        for (ListenerList::const_iterator it = list.begin(); it != list.end(); ++it)
+            (*it)->OnContextReleased(context);
+
+        s_map.erase(itMap);
+    }
+}
+
 bool Environment::Initialize()
 {
-    if (s_loop)
+    if (s_loopAsync.IsRunning())
         return true;
 
-    // initialize uv
-    // TODO: setup event loop thread
+    // initialize synchronous uv event loop
+    s_loopSync = uv_default_loop();
 
-    s_loop = uv_default_loop();
-    // uv_run(s_loop, UV_RUN_DEFAULT);
+    NCJS_CHECK(s_loopSync);
 
-    if (s_loop == NULL)
-        return false;
-
-    return true;
+    return s_loopAsync.Start();
 }
 
 void Environment::Shutdown()
 {
-    if (s_loop == NULL)
+    if (!s_loopAsync.IsRunning())
         return;
 
-    uv_loop_close(s_loop);
-
-    s_loop = NULL;
+    s_loopAsync.Stop();
+    s_loopSync = NULL;
 }
-
 
 } // ncjs
 
